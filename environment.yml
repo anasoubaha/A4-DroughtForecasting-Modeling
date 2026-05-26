@@ -1,0 +1,52 @@
+name: droughtforecast
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+
+  # Core scientific stack
+  - numpy
+  - pandas
+  - scipy
+  - xarray
+  - netcdf4
+  - zarr
+  - dask
+  - bottleneck         # accelerated NaN-aware ops used by xarray.interpolate_na
+
+  # Stats / time series
+  - statsmodels
+  - arch-py              # block bootstrap (PyPI name is "arch", conda-forge name is "arch-py")
+
+  # ML
+  - scikit-learn
+  - xgboost
+  - optuna
+
+  # Plotting / mapping
+  - matplotlib
+  - seaborn
+  - cartopy
+
+  # Spatial / regridding (optional but useful)
+  - xesmf
+
+  # Notebooks
+  - jupyterlab
+  - jupytext
+  - ipykernel          # required to register this env as a Jupyter kernel
+
+  # Config
+  - pyyaml
+  - pydantic
+
+  # Quality
+  - pytest
+  - pytest-cov
+  - ruff
+  - black
+
+  # Pip-only packages
+  - pip
+  - pip:
+      - shap

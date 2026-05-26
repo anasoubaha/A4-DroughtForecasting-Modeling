@@ -1,0 +1,46 @@
+# Data layer configuration. See droughtmodel/data.py.
+
+paths:
+  cru: inputs/cru-inputs.nc
+  era5: inputs/era5-inputs.nc
+  climate_indices: inputs/climate_indices.nc
+  spei3: inputs/SPEI3.nc
+
+time_period:
+  start: "1950-01"
+  end: "2024-12"
+
+# Map source-file variable names → canonical names used throughout the codebase.
+variable_renames:
+  cru:
+    pre: precip
+    tmn: tmin
+    tmx: tmax
+    pet: pet
+  era5:
+    ssrd: solar
+    si2: wind
+    vpd: vpd
+    tcwv: tcwv
+    # When RZSM replaces SSMI, rename 'rzsm' here (or leave 'ssmi' mapped to 'rzsm' temporarily).
+    rzsm: rzsm
+  climate_indices:
+    Nino34: enso
+    NAO: nao
+    MO_std: mo
+  spei3:
+    spei3: spei3
+
+# Coordinate handling: enforce lat ascending for consistency.
+sort_lat_ascending: true
+
+# Missing-value handling.
+missing_values:
+  strategy: interpolate   # one of: interpolate, drop, ffill, none
+  max_gap_months: 2       # max consecutive missing months filled by interpolation
+  cell_missing_frac_threshold: 0.05  # cells with > this fraction missing in train are dropped
+
+# Stationarity diagnostics (run once, reported in notebooks/01_eda.ipynb).
+stationarity:
+  mann_kendall_alpha: 0.05
+  ks_test_split_year: 1990   # compare 1950–(split−1) vs split–2024
