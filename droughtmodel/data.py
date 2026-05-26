@@ -94,6 +94,8 @@ def handle_missing_values(
     ds: xr.Dataset | xr.DataArray,
     strategy: str = "interpolate",
     max_gap_months: int = 2,
+    bilateral: bool = False,
+    replace_inf: bool = True,
 ) -> xr.Dataset | xr.DataArray:
     """Handle missing values along the time dimension.
 
@@ -102,11 +104,41 @@ def handle_missing_values(
         - 'ffill': forward-fill
         - 'drop': drop time steps where any value is NaN (use cautiously on gridded data)
         - 'none': return unchanged
+
+    Parameters
+    ----------
+    bilateral
+        Only effective with `strategy='interpolate'`. Linear interpolation can
+        only fill interior gaps (NaNs with valid values on both sides). If True,
+        leading/trailing NaN runs are additionally filled by nearest-neighbour
+        propagation (bfill then ffill), each bounded by `max_gap_months`.
+    replace_inf
+        If True, replace ±Inf with NaN before applying the strategy. SPEI/SPI
+        fitting can return -Inf for extreme-tail months; treating them as
+        missing lets the same pipeline fill them.
     """
+    if replace_inf:
+        if isinstance(ds, xr.Dataset):
+            ds = ds.map(lambda da: da.where(np.isfinite(da)))
+        else:
+            ds = ds.where(np.isfinite(ds))
+
     if strategy == "none":
         return ds
     if strategy == "interpolate":
-        return ds.interpolate_na(dim="time", method="linear", max_gap=pd.Timedelta(days=31 * max_gap_months))
+        # Treat the time dim as equally-spaced months (use_coordinate=False) so
+        # `max_gap` is a plain month count. xarray measures an interior N-NaN
+        # gap as length N+1 (distance between bracketing valid points), so to
+        # fill up to `max_gap_months` consecutive NaN months we pass N+1.
+        out = ds.interpolate_na(
+            dim="time",
+            method="linear",
+            use_coordinate=False,
+            max_gap=max_gap_months + 1,
+        )
+        if bilateral:
+            out = out.bfill(dim="time", limit=max_gap_months).ffill(dim="time", limit=max_gap_months)
+        return out
     if strategy == "ffill":
         return ds.ffill(dim="time")
     if strategy == "drop":
@@ -157,9 +189,16 @@ def load_all(config: dict[str, Any] | None = None) -> dict[str, Any]:
     mv = config.get("missing_values", {})
     strategy = mv.get("strategy", "interpolate")
     max_gap = mv.get("max_gap_months", 2)
-    if strategy != "none":
-        for k, ds in aligned.items():
-            aligned[k] = handle_missing_values(ds, strategy=strategy, max_gap_months=max_gap)
+    bilateral = mv.get("bilateral", False)
+    replace_inf = mv.get("replace_inf", True)
+    for k, ds in aligned.items():
+        aligned[k] = handle_missing_values(
+            ds,
+            strategy=strategy,
+            max_gap_months=max_gap,
+            bilateral=bilateral,
+            replace_inf=replace_inf,
+        )
 
     return aligned
 

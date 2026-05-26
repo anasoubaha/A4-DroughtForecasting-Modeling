@@ -38,6 +38,8 @@ sort_lat_ascending: true
 missing_values:
   strategy: interpolate   # one of: interpolate, drop, ffill, none
   max_gap_months: 2       # max consecutive missing months filled by interpolation
+  bilateral: false        # if true, also fill leading/trailing NaN runs (bfill+ffill, bounded by max_gap_months)
+  replace_inf: true       # convert ±Inf (e.g. SPEI extreme-tail outputs) to NaN before filling
   cell_missing_frac_threshold: 0.05  # cells with > this fraction missing in train are dropped
 
 # Stationarity diagnostics (run once, reported in notebooks/01_eda.ipynb).
