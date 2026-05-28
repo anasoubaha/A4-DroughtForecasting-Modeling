@@ -28,8 +28,10 @@ dependencies:
   - seaborn
   - cartopy
 
-  # Spatial / regridding (optional but useful)
+  # Spatial / regridding / region masking
   - xesmf
+  - geopandas          # shapefile reading (Morocco boundary)
+  - regionmask         # xarray-native shapefile-to-grid masking
 
   # Notebooks
   - jupyterlab
