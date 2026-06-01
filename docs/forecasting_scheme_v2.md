@@ -1,7 +1,7 @@
 ---
 title: "SPEI3 Forecasting Scheme — v2"
 author: "Anas Soubaha"
-date: "2026-05-24"
+date: "2026-06-01"
 geometry: margin=2cm
 fontsize: 11pt
 ---
@@ -76,8 +76,21 @@ Three independent datasets: Dataset_L1, Dataset_L3, Dataset_L6.
 
 - **PACF as primary tool** (not ACF), computed per CV fold on training data only
 - Test lags 1–12 uniformly for **all variables** — let the data prune
-- Significance threshold: **|PACF| > 0.20**, with a sensitivity test at 0.10 and 0.30 reported in appendix
-- **CCF screening** between SPEI3 and each candidate predictor on the training fold; include the strongest-lag CCF result if not already selected by PACF
+- Significance threshold: **|PACF| > 0.20**, with a sensitivity test at 0.10 and 0.30 reported in appendix. This is much stricter than 95 % statistical significance (Bartlett's threshold = 1.96/√N ≈ 0.065 for N = 900, ≈ 0.113 for N = 300 winter-only); 0.20 is a deliberate practical-relevance filter rather than a significance filter.
+- **CCF screening** between SPEI3 at time *t* and each candidate predictor at time *t − k*, restricted to **target months t ∈ {Nov, Dec, Jan, Feb}** since that is the evaluation season. Predictors whose CCF crosses |CCF| > 0.20 at any lag 1..12 are included at that lag.
+- **Selected lags = union of PACF-passing lags ∪ CCF-passing lags.** Variables with no surviving lags are dropped from the lagged feature set (the contemporary feature is unaffected).
+
+**Spatial aggregation for lag selection.** PACF and CCF require a single 1-D time series per variable, but the inputs are gridded. The procedure:
+
+1. Load the Morocco boundary from `shapefiles/MAR_adm0.shp` (164 cells inside, out of 4096 in the full grid).
+2. Restrict the gridded variable to Morocco cells.
+3. **Approach A (default)** — `spatial_mean` of the Morocco cells, then PACF + CCF on the resulting 1-D series.
+4. **Approach B (alternative)** — PACF + CCF on each Morocco cell's 1-D series, then average those 164 spectra; threshold applied to the averaged spectrum. Implemented for transparency / sensitivity; reported in the appendix.
+
+The two approaches agree closely for region-coherent signals (NAO, ENSO, MO, SPEI3, precip) and differ slightly for spatially-heterogeneous variables (RZSM, TCWV, VPD) where Approach A retains more long lags.
+
+**Important: spatial averaging is used *only* for lag selection.** The CV / modeling pipeline (Sections 4–7) treats every (cell, time) sample as an independent observation, with `(lat, lon)` included as features (Section 3.2 D). No spatial averaging is applied at training or inference time.
+
 - For linear models: hand all surviving lags to **Lasso / Elastic Net** for final pruning
 - For RF / XGBoost: use the PACF + CCF output directly (trees handle redundancy)
 
@@ -94,15 +107,21 @@ Fast-response variables tested for lag 1 only by default: Tmin, Tmax, Solar, Win
 
 ## 4. Cross-Validation Strategy
 
-### 5-fold rolling-origin, expanding training window
+### 5-fold rolling-origin, expanding training window, continuous test windows
 
-| Fold | Train | Validate | Test |
+Test windows are **contiguous** so the per-fold out-of-sample predictions stitch into an unbroken 2000–2024 array suitable for pooled-metric computation.
+
+| Fold | Train (planned) | Validate (planned, 8 y) | Test (5 y, continuous) |
 |---|---|---|---|
-| 1 | 1950–1989 (40 y) | 1990–1996 (7 y) | 1997–2001 (5 y) |
-| 2 | 1950–1996 (47 y) | 1997–2001 (5 y) | 2002–2006 (5 y) |
-| 3 | 1950–2006 (57 y) | 2007–2011 (5 y) | 2012–2016 (5 y) |
-| 4 | 1950–2011 (62 y) | 2012–2016 (5 y) | 2017–2020 (4 y) |
-| 5 | 1950–2016 (67 y) | 2017–2020 (4 y) | 2021–2024 (4 y) |
+| 1 | 1950-01 → 1991-12 (42 y) | 1992-01 → 1999-12 | **2000-01 → 2004-12** |
+| 2 | 1950-01 → 1996-12 (47 y) | 1997-01 → 2004-12 | **2005-01 → 2009-12** |
+| 3 | 1950-01 → 2001-12 (52 y) | 2002-01 → 2009-12 | **2010-01 → 2014-12** |
+| 4 | 1950-01 → 2006-12 (57 y) | 2007-01 → 2014-12 | **2015-01 → 2019-12** |
+| 5 | 1950-01 → 2011-12 (62 y) | 2012-01 → 2019-12 | **2020-01 → 2024-12** |
+
+Pooled out-of-sample series: **2000-01 → 2024-12 unbroken (25 y; ≈ 100 winter target months × spatial-pooling cells)**.
+
+The "planned" sizes above are subsequently shrunk by a per-fold **boundary gap** (quarantine) — see §4.1.
 
 **Leakage controls**:
 
@@ -110,11 +129,48 @@ Fast-response variables tested for lag 1 only by default: Tmin, Tmax, Solar, Win
 - Per-fold standardization (Section 5)
 - Per-fold feature selection (Section 6)
 - Per-fold PACF / CCF lag selection (Section 3.2 B)
+- **Per-fold boundary gap (quarantine) — Section 4.1**
 
 **Aggregation across folds**:
 
-- **Pooled**: concatenate predictions across folds → compute headline metric once
-- **Per-fold**: same metrics reported per fold in supplementary table to show stability
+- **Pooled**: concatenate predictions across folds → compute headline metric once. With the continuous-test design this is exactly a single, unbroken 25-year out-of-sample array (≈ 100 winter months × cells). Pooled metrics are the primary reporting unit.
+- **Per-fold**: same metrics reported per fold in supplementary table to show stability. Per-fold winter sample is small (16–20 months), so per-fold metrics are noisy by design; do not over-interpret single-fold differences.
+- **Winter-only and all-months reporting**: the headline metric is computed on **winter target months only** (t ∈ {Nov, Dec, Jan, Feb}). A parallel **all-months evaluation** is computed on every test month and reported alongside as a supplementary diagnostic — it uses 4× more evaluation samples and tests whether skill is uniform across seasons or concentrated in the winter target.
+
+### 4.1 Boundary gap (quarantine)
+
+Because we use **lagged features**, a test row at time *t* contains feature values drawn from *t−1, …, t−L* (where *L* is the maximum selected lag for the fold). If those *t−1 … t−L* months are also rows the model fit on as **training targets**, there is a subtle leakage path: the model's adaptation to those rows' (X, y) relationship can propagate into test predictions via the lag features. The same issue applies to the train → val boundary, with val playing the role of "future" relative to train.
+
+The quarantine eliminates this path while preserving the continuous out-of-sample test array. Concretely: **the last *L* months of train (and of val) are excluded from being used as targets**, but their feature values remain available so that later rows can reference them via lag features.
+
+**Adaptive *L***. *L* is determined per-fold from the selected lags:
+
+```
+for fold in cv_folds:
+    1. Provisional split using the planned windows above.
+    2. Run PACF + winter-only CCF on the provisional train  →  selected_lags
+       L = max(selected_lags)        # e.g. up to 12 for our long-memory variables
+    3. Refine indices:
+         train_indices  = months in [train_start  .. val_start  − L − 1]
+         val_indices    = months in [val_start    .. test_start − L − 1]
+         test_indices   = months in [test_start   .. test_end]      # unchanged
+    4. Fit fold-wise standardizer on train_indices only.
+    5. Train; tune HPs on val_indices; predict on test_indices.
+```
+
+Test windows are never shrunk — the pooled out-of-sample stitching remains complete.
+
+**Effective sizes with *L* = 12 (worst case; in practice *L* may be smaller):**
+
+| Fold | Effective train | Effective val (HP tuning) | Test |
+|---|---|---|---|
+| 1 | 1950-01 → 1990-12 (41 y) | 1992-01 → 1998-12 (7 y) | 2000-01 → 2004-12 |
+| 2 | 1950-01 → 1995-12 (46 y) | 1997-01 → 2003-12 (7 y) | 2005-01 → 2009-12 |
+| 3 | 1950-01 → 2000-12 (51 y) | 2002-01 → 2008-12 (7 y) | 2010-01 → 2014-12 |
+| 4 | 1950-01 → 2005-12 (56 y) | 2007-01 → 2013-12 (7 y) | 2015-01 → 2019-12 |
+| 5 | 1950-01 → 2010-12 (61 y) | 2012-01 → 2018-12 (7 y) | 2020-01 → 2024-12 |
+
+**Implementation**. Standard libraries (e.g. `sklearn.model_selection.TimeSeriesSplit`) do not support this reverse-gap logic out of the box. The pipeline implements a custom `RollingOriginCV` class in `droughtmodel/cv.py` that yields integer index arrays `(train_idx, val_idx, test_idx)` with the quarantine subtracted from the end of train and val. Models receive the indices directly and see only the non-quarantined rows.
 
 ## 5. Standardization
 
@@ -134,19 +190,20 @@ Procedure per fold:
 
 ## 6. Feature Selection (per fold)
 
-| Method | Applied to | Purpose |
+A single selection method is used: **Lasso / Elastic Net** for linear models (selection happens during fitting via the L1 penalty). Tree-based models use no explicit selection — they tolerate redundant features natively. Permutation importance (RF) and SHAP (XGBoost) are computed for **interpretability and reporting only**, not used to drop features.
+
+| Method | Role | Applied to |
 |---|---|---|
-| VIF (threshold < 5) | Linear-family pre-filter | Remove multicollinearity |
-| Lasso / Elastic Net | Final feature set for linear models | L1 sparsity, lag pruning |
-| Permutation importance | RF | Rank features, report top-*k* |
-| SHAP values | XGBoost | Interpretability and ranking |
-| RFE | Tabular models (optional) | Subset-selection sensitivity |
+| **Lasso / Elastic Net** | Selection (during fit via L1) | Linear models — primary |
+| Permutation importance | Diagnostic (post-hoc ranking) | Random Forest |
+| SHAP values | Diagnostic (post-hoc ranking + interpretability) | XGBoost |
 
 **Pipeline per model family**:
 
-- Linear / Ridge / Lasso / Elastic Net: VIF filter → Lasso / Elastic Net during fit
-- RF: all features in; permutation importance for diagnostics
-- XGBoost: all features in; SHAP for diagnostics
+- **Linear models** (OLS / Ridge / Lasso / Elastic Net): All Section-3 features pass to the fitter; Lasso / Elastic Net's L1 penalty produces the final sparse coefficient vector. Multicollinearity is absorbed by the L1 / L2 regularizer; no separate VIF pre-filter is applied.
+- **RF / XGBoost**: All Section-3 features pass to the fitter. After training, permutation importance (RF) and SHAP (XGBoost) are reported as paper diagnostics.
+
+Selection is repeated per fold (Lasso is refit per fold), preserving the leakage discipline.
 
 ## 7. Model Configurations
 
@@ -156,9 +213,7 @@ Procedure per fold:
 |---|---|---|
 | Climatology | per-cell per-calendar-month training mean | Reference for skill scores |
 | Persistence | SPEI3(t+L) = SPEI3(t) | Inertia benchmark |
-| Damped persistence | SPEI3(t+L) = α^L · SPEI3(t), α = lag-L autocorrelation | Optimal AR(1), strong mid-lead benchmark |
-| AR(p) | Linear regression on lagged SPEI3 only | Univariate AR benchmark |
-| Teleconnection-only (optional) | Linear regression on ENSO / NAO / MO lags only | Skill from large-scale drivers alone |
+| AR(p) | Linear regression on lagged SPEI3 only | Univariate autoregressive benchmark (subsumes damped persistence at p = 1) |
 
 ### 7.1 ML Models
 
@@ -192,17 +247,19 @@ for fold in cv_folds:
 
 **Search method**:
 
-- **Grid search**: Ridge, Lasso, Elastic Net
-- **Bayesian (Optuna)**: RF, XGBoost — 50–100 trials each
+- **Grid search is the primary method for all models** (Ridge, Lasso, Elastic Net, RF, XGBoost) — reproducible, transparent, and acceptable in cost given the reduced XGBoost grid below.
+- **Bayesian (Optuna)** is available as an **optional** alternative for RF and XGBoost (selectable via the experiment YAML), to be used if/when the grid becomes a bottleneck.
 
-**Suggested search spaces**:
+**Search spaces (grid)**:
 
-| Model | Space |
-|---|---|
-| Ridge / Lasso | `alpha ∈ logspace(−3, 3, 13)` |
-| Elastic Net | `alpha ∈ logspace(−3, 3, 7); l1_ratio ∈ {0.1, 0.3, 0.5, 0.7, 0.9}` |
-| RF | `n_estimators ∈ {200, 500, 1000}; max_depth ∈ {None, 5, 10, 20}; min_samples_leaf ∈ {1, 5, 20}; max_features ∈ {sqrt, 0.5, 1.0}` |
-| XGBoost | `n_estimators` via early stopping on val; `max_depth ∈ {3, 6, 10}; lr ∈ {0.01, 0.05, 0.1}; subsample, colsample_bytree ∈ {0.5, 0.8, 1.0}; reg_alpha, reg_lambda ∈ logspace(−3, 1, 5); min_child_weight ∈ {1, 5, 20}` |
+| Model | Space | Combinations |
+|---|---|---|
+| Ridge / Lasso | `alpha ∈ logspace(−3, 3, 13)` | 13 |
+| Elastic Net | `alpha ∈ logspace(−3, 3, 7); l1_ratio ∈ {0.1, 0.3, 0.5, 0.7, 0.9}` | 35 |
+| RF | `n_estimators ∈ {200, 500, 1000}; max_depth ∈ {None, 5, 10, 20}; min_samples_leaf ∈ {1, 5, 20}; max_features ∈ {sqrt, 0.5, 1.0}` | 108 |
+| XGBoost (reduced grid) | `max_depth ∈ {4, 6, 8}; lr ∈ {0.05, 0.1}; subsample ∈ {0.7, 1.0}; colsample_bytree ∈ {0.7, 1.0}; reg_lambda ∈ {0.1, 1.0, 10.0}; min_child_weight ∈ {1, 5}`; `n_estimators` via early stopping on val | 144 |
+
+The XGBoost space is intentionally compact (144 combos vs. 6,075 in the full v2 draft) so that full grid search remains tractable across 5 folds × 3 leads. Optuna can explore the full space if needed.
 
 ## 9. Forecast Generation
 
@@ -215,49 +272,33 @@ For each issue month *t*:
 
 ## 10. Evaluation Metrics
 
-### 10.1 Deterministic (continuous SPEI3)
+### 10.1 Deterministic (continuous SPEI3) — headline
 
-| Metric | Formula | Use |
+| Metric | Formula | Role |
 |---|---|---|
-| RMSE | √[mean((ŷ − y)²)] | Error magnitude |
-| MAE | mean(|ŷ − y|) | Robust error |
-| Pearson *r* | corr(ŷ, y) | Pattern correlation |
-| **ACC** | corr(ŷ − clim, y − clim) | **Headline** — anomaly correlation |
-| **MSSS vs climatology** | 1 − MSE(model) / MSE(climatology) | **Headline** — % improvement over climatology |
-| MSSS vs persistence | 1 − MSE(model) / MSE(persistence) | Added value beyond inertia |
+| **MAE** | mean(|ŷ − y|) | Headline — robust error |
+| **RMSE** | √[mean((ŷ − y)²)] | Headline — error magnitude |
+| **Pearson *r*** | corr(ŷ, y) | Headline — pattern correlation |
+| **ACC** | corr(ŷ − clim, y − clim) | Headline — anomaly correlation |
+| **MSSS vs climatology** | 1 − MSE(model) / MSE(climatology) | Headline — % improvement over climatology |
+| **MSSS vs persistence** | 1 − MSE(model) / MSE(persistence) | Headline — added value beyond inertia |
 
-### 10.2 Categorical (drought classes — McKee thresholds)
+### 10.2 Optional metrics (implemented in code, not reported by default)
 
-| Class | SPEI3 |
-|---|---|
-| Extreme drought | < −2.0 |
-| Severe drought | [−2.0, −1.5) |
-| Moderate drought | [−1.5, −1.0) |
-| Normal / wet | ≥ −1.0 |
+- **HSS at SPEI3 < −1.0** — binary categorical (drought / no drought). Available via the metrics config but not part of the v1 headline.
+- **POD, FAR, CSI, ETS, multi-class HSS** — not implemented in v1; deferred to a follow-up if categorical evaluation becomes a focus.
+- **Probabilistic (CRPS, Brier, reliability)** — deferred; requires quantile / probabilistic models.
 
-| Metric | Use |
-|---|---|
-| POD (hit rate) | Drought detection rate |
-| FAR | False alarm ratio |
-| CSI | Combined accuracy |
-| **HSS** | **Headline** — binary at SPEI3 < −1.0 and multi-class |
-| ETS | Chance-corrected hits |
+### 10.3 Headline Metrics (committed)
 
-### 10.3 Probabilistic (optional)
+The six deterministic metrics in §10.1 form the headline set. They are reported per (model, lead) on the **pooled** out-of-sample array (2000–2024 winter target months for the headline; all months for the supplementary table).
 
-CRPS, Brier skill score, reliability diagrams — required only if uncertainty quantification is added (recommended via quantile XGBoost in a follow-up).
-
-### 10.4 Headline Metrics (committed)
-
-1. **ACC**
-2. **MSSS vs climatology**
-3. **HSS for SPEI3 < −1.0**
-
-### 10.5 Reporting Structure
+### 10.4 Reporting Structure
 
 - Per lead time (L = 1, 3, 6)
 - Per CV fold (supplementary table) + pooled across folds (headline)
 - Spatial: per-cell skill maps + pooled metrics across cells
+- **Winter-only** evaluation (t ∈ Nov–Feb) is the **headline** unit; **all-months** evaluation is reported as a supplementary diagnostic alongside (uses 4× more samples, lets us check whether skill is winter-specific or season-uniform)
 - **Block bootstrap 95 % CIs** on all headline metrics:
   - Stationary bootstrap; mean block ≈ 12 months
   - For winter-only metrics: year-blocks (full Nov–Feb season per block)
@@ -268,11 +309,12 @@ CRPS, Brier skill score, reliability diagrams — required only if uncertainty q
 | Output | Description |
 |---|---|
 | Grid-level forecasts | 0.5° SPEI3 predictions per (model, lead) |
-| Spatial skill maps | Per-cell ACC, MSSS, HSS for each (model, lead) |
+| Spatial skill maps | Per-cell ACC, MSSS for each (model, lead) |
 | Forecast-vs-truth time series | At selected cells (Casablanca, Marrakech, Agadir) |
 | Feature importance diagnostics | Permutation (RF), SHAP (XGBoost), per lead |
-| Skill comparison tables | Models × leads × headline metrics, with bootstrap CIs |
+| Skill comparison tables | Models × leads × headline metrics, with bootstrap CIs (winter-only headline; all-months supplementary) |
 | Per-fold stability tables | Same metrics broken by fold |
+| Winter-vs-all-months skill diagnostic | Table comparing each model's metrics on winter targets vs all-month targets, per lead |
 | Baseline-vs-ML skill plots | Bars showing MSSS for each model relative to each baseline |
 | Lag selection diagnostics | PACF / CCF plots per variable per fold |
 | Stationarity diagnostics | Mann-Kendall and KS test results per cell |
@@ -286,19 +328,21 @@ CRPS, Brier skill score, reliability diagrams — required only if uncertainty q
 | Spatial resolution | 64 × 64 grid at 0.5° over Morocco |
 | Target | SPEI-3 at L = 1, 3, 6 months |
 | Evaluation season | Winter (Nov–Feb) |
-| Cross-validation | 5-fold rolling-origin, expanding train window |
-| Leakage control | Fold-wise standardization, feature selection, lag selection; strict target shifting |
+| Cross-validation | 5-fold rolling-origin, expanding train window, **continuous test windows (2000–2024 unbroken)** |
+| Leakage control | Fold-wise standardization, feature selection, lag selection; strict target shifting; **boundary-gap quarantine (adaptive to per-fold max selected lag)** at train → val and val → test boundaries |
 | Pre-standardized exceptions | ENSO, NAO, MO, **SPEI3 (as predictor)** |
 | Climate drivers | ENSO, NAO, MO (+ optional AMO, AO in v2) |
-| Lag selection | PACF + CCF, threshold &#124;PACF&#124; > 0.20, sensitivity ∈ {0.10, 0.30}, Lasso finalizes for linear |
+| Lag selection | PACF + winter-only CCF on Morocco-masked spatial mean; threshold &#124;·&#124; > 0.20; sensitivity ∈ {0.10, 0.30}; Lasso finalizes for linear |
+| Region mask for lag selection | shapefiles/MAR_adm0.shp (164 cells inside) — Approach A (spatial mean) default; Approach B (per-cell then mean) reported as appendix sensitivity |
 | Modeling unit | Global model with (lat, lon) features (v1); per-cell as sensitivity |
-| Baselines | Climatology, persistence, damped persistence, AR(p) |
+| Baselines | Climatology, persistence, AR(p) |
+| Feature selection | Lasso / Elastic Net for linear (selection during fit); no explicit selection for trees; SHAP / permutation importance reported as diagnostics |
 | ML models | OLS / Ridge / Lasso / Elastic Net, RF, XGBoost |
 | DL models | LSTM, CNN, CNN-LSTM (or ConvLSTM) — deferred |
 | HP tuning | Protocol A — tune on val, refit on train + val, eval on test |
-| HP search | Grid (linear), Optuna (RF, XGBoost); early stopping (XGBoost) |
-| Deterministic metrics | RMSE, MAE, ACC, MSSS-vs-clim, MSSS-vs-persistence |
-| Categorical metrics | POD, FAR, CSI, HSS, ETS — binary at SPEI3 < −1.0 + multi-class |
-| Headline metrics | ACC, MSSS-vs-clim, HSS at SPEI3 < −1.0 |
+| HP search | Grid search primary for all models (Ridge/Lasso/EN: 13–35 combos; RF: 108; XGBoost reduced grid: 144). Optuna optional for RF / XGBoost |
+| Headline metrics (all deterministic) | MAE, RMSE, Pearson *r*, ACC, MSSS-vs-clim, MSSS-vs-persistence |
+| Optional metric | HSS at SPEI3 < −1.0 (available in code, not in v1 paper headline) |
+| Evaluation window | Winter-only (Nov–Feb) headline; all-months supplementary diagnostic |
 | Uncertainty | Stationary block bootstrap, 1000 replicates, 95 % CI |
 | Outputs | Forecasts, spatial skill maps, time series, importance, skill tables, CIs |
