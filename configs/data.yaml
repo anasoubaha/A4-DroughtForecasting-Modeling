@@ -22,7 +22,6 @@ variable_renames:
     si2: wind
     vpd: vpd
     tcwv: tcwv
-    # When RZSM replaces SSMI, rename 'rzsm' here (or leave 'ssmi' mapped to 'rzsm' temporarily).
     rzsm: rzsm
   climate_indices:
     Nino34: enso

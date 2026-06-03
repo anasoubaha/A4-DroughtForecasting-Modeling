@@ -47,7 +47,7 @@ ccf:
   threshold: 0.20
   winter_only: true             # restrict CCF target months to Nov-Feb (our evaluation season)
 
-# Optional region mask for spatial aggregation during PACF/CCF.
+# Region mask for spatial aggregation during PACF/CCF.
 # When set, lag selection uses only cells inside the shapefile.
 # Leave `path: null` to use the full grid.
 region_mask:
