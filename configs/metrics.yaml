@@ -1,0 +1,37 @@
+# Evaluation metrics configuration (v2 §10).
+
+# Headline deterministic metrics (always computed by default).
+# Per v2 §10.1: all six are part of the paper headline.
+headline_metrics:
+  - mae
+  - rmse
+  - pearson_r
+  - acc
+  - msss_vs_climatology
+  - msss_vs_persistence
+
+# Optional categorical metric (off by default; flip to true to include).
+# Per v2 §10.2: HSS at SPEI3 < −1.0 is in code but not in v1 paper headline.
+include_hss: false
+hss_threshold: -1.0   # SPEI3 < threshold → drought class
+
+# Block bootstrap CIs on the headline metrics (v2 §10.4).
+bootstrap:
+  enabled: true
+  n_replicates: 1000
+  ci: 0.95
+  # `mean_block_length` is in months. For winter-only evaluation (4 winter months
+  # per year, year-block), use 4. For all-months evaluation (year-block of 12),
+  # use 12. The pipeline picks the right value per evaluation context.
+  mean_block_length_winter: 4
+  mean_block_length_all: 12
+  # Reproducibility seed (null = non-deterministic; int = reproducible).
+  seed: 42
+
+# Evaluation window split (v2 §4 + §10.4).
+# Both are reported when the pipeline runs:
+#   winter_only: t ∈ {Nov, Dec, Jan, Feb} — paper headline
+#   all_months:  every test month — supplementary diagnostic
+evaluation_windows:
+  winter_only: true
+  all_months: true
