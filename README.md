@@ -34,4 +34,4 @@ pytest
 4. `python scripts/04_run_all_experiments.py` — sweeps every experiment config
 5. `python scripts/05_generate_report.py` — compiles results into final tables and figures
 
-See `docs/forecasting_scheme_v2.md` for the full methodology.
+See `docs/SPEI3_Forecasting_Scheme_v3.md` for the full methodology.

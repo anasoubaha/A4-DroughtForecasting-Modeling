@@ -1,0 +1,6 @@
+# Climatology baseline.
+# Per-cell per-calendar-month mean of the training target (v3 §7.0).
+
+name: climatology
+class: climatology
+params: {}   # no hyperparameters

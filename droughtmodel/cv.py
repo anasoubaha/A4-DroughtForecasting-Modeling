@@ -1,8 +1,8 @@
-"""Cross-validation and fold-wise standardization (v2 §4–5).
+"""Cross-validation and fold-wise standardization (v3 §4–5).
 
 Provides:
 - `RollingOriginCV` — 5-fold rolling-origin with continuous test windows and
-  an adaptive boundary-gap quarantine (see v2 §4.1)
+  an adaptive boundary-gap quarantine (see v3 §4.1)
 - `FoldStandardizer` — fold-wise z-score standardization with a pre-standardized
   exception list (ENSO, NAO, MO, SPEI3, target — and their lagged variants)
 """
@@ -211,7 +211,7 @@ def _apply_region_mask(data: xr.Dataset, region_mask: xr.DataArray | None) -> xr
 class FoldStandardizer:
     """Fold-wise z-score standardization (pooled across all cells).
 
-    Per v2 §5 + Morocco-only modeling scope: variables listed in `exceptions` are
+    Per v3 §5 + Morocco-only modeling scope: variables listed in `exceptions` are
     NOT re-standardized (they are already on a standardized scale by construction
     or by provider). Lagged variants matching `<base>_lag{k}` for any `base` in
     `exceptions` are also excluded automatically.
@@ -321,7 +321,7 @@ class PerCellStandardizer:
 
     For each (lat, lon) cell of a gridded variable, computes its own (μ, σ) along
     the time axis and standardizes that cell's time series independently. This is
-    the natural choice for the **per-cell sensitivity test** (v2 §7.2).
+    the natural choice for the **per-cell sensitivity test** (v3 §7.2).
 
     Parameters
     ----------

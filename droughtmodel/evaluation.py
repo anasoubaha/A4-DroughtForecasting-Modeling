@@ -1,4 +1,4 @@
-"""Evaluation metrics and block bootstrap CIs (v2 §10).
+"""Evaluation metrics and block bootstrap CIs (v3 §10).
 
 Headline deterministic metrics:
 - ``mae``                — Mean Absolute Error
@@ -260,11 +260,11 @@ class MetricsReporter:
     Parameters
     ----------
     metrics
-        List of metric names to compute. Defaults to v2 headline set.
+        List of metric names to compute. Defaults to v3 headline set.
     include_hss
         If True, also compute ``hss_binary`` at ``hss_threshold``.
     hss_threshold
-        Drought threshold (default −1.0 per v2 §10.2).
+        Drought threshold (default −1.0 per v3 §10.2).
     bootstrap
         If True, compute block-bootstrap CIs for every metric.
     mean_block_length

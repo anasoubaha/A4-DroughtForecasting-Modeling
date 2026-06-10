@@ -1,4 +1,4 @@
-"""Feature engineering for SPEI3 forecasting (v2 scheme Section 3).
+"""Feature engineering for SPEI3 forecasting (v3 scheme Section 3).
 
 Builds Dataset_L1, Dataset_L3, Dataset_L6 from the canonical inputs (returned by
 `droughtmodel.data.load_all`). Provides:

@@ -1,6 +1,6 @@
 ---
 title: "SPEI3 Forecasting Scheme — v2"
-author: "Anas Soubaha"
+author: "Anas Oubaha"
 date: "2026-06-01"
 geometry: margin=2cm
 fontsize: 11pt

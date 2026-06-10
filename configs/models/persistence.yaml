@@ -1,0 +1,8 @@
+# Persistence baseline.
+# Forecast SPEI3(t+L) = SPEI3(t) — uses the contemporary spei3 column.
+# v3 §7.0.
+
+name: persistence
+class: persistence
+params:
+  spei3_column: spei3   # column in the feature dataset to copy as the prediction

@@ -1,0 +1,14 @@
+# AR(p) baseline.
+# Ridge regression on `spei3` + `spei3_lag1` ... `spei3_lag{p-1}`.
+# Pooled across Morocco cells (single set of coefficients).
+# v3 §7.0.
+
+name: ar
+class: ar
+params:
+  p: 3            # AR order: uses spei3, spei3_lag1, spei3_lag2 (if available)
+  alpha: 1.0      # Ridge regularization
+
+# Sensitivity values (optional, for the paper appendix):
+#   p ∈ {1, 2, 3, 6, 12}
+#   alpha ∈ logspace(−3, 3, 13)

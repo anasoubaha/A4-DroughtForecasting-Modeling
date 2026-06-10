@@ -1,7 +1,7 @@
-# Evaluation metrics configuration (v2 §10).
+# Evaluation metrics configuration (v3 §10).
 
 # Headline deterministic metrics (always computed by default).
-# Per v2 §10.1: all six are part of the paper headline.
+# Per v3 §10.1: all six are part of the paper headline.
 headline_metrics:
   - mae
   - rmse
@@ -11,11 +11,11 @@ headline_metrics:
   - msss_vs_persistence
 
 # Optional categorical metric (off by default; flip to true to include).
-# Per v2 §10.2: HSS at SPEI3 < −1.0 is in code but not in v1 paper headline.
+# Per v3 §10.2: HSS at SPEI3 < −1.0 is in code but not in v1 paper headline.
 include_hss: false
 hss_threshold: -1.0   # SPEI3 < threshold → drought class
 
-# Block bootstrap CIs on the headline metrics (v2 §10.4).
+# Block bootstrap CIs on the headline metrics (v3 §10.4).
 bootstrap:
   enabled: true
   n_replicates: 1000
@@ -28,7 +28,7 @@ bootstrap:
   # Reproducibility seed (null = non-deterministic; int = reproducible).
   seed: 42
 
-# Evaluation window split (v2 §4 + §10.4).
+# Evaluation window split (v3 §4 + §10.4).
 # Both are reported when the pipeline runs:
 #   winter_only: t ∈ {Nov, Dec, Jan, Feb} — paper headline
 #   all_months:  every test month — supplementary diagnostic
