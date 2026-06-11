@@ -200,47 +200,99 @@ The “planned” sizes above are subsequently shrunk by a per-fold **boundary g
 
 • **Winter-only and all-months reporting**: the headline metric is computed on **winter target months only** (t in {Nov, Dec, Jan, Feb}). A parallel **all-months evaluation** is computed on every test month and reported alongside as a supplementary diagnostic — it uses 4× more evaluation samples and tests whether skill is uniform across seasons or concentrated in the winter target. 
 
-**4.1 Boundary gap (quarantine)** 
+**4.1 Boundary gap (quarantine)**
 
-Because we use **lagged features**, a test row at time *t* contains feature values drawn from *t−1, …, t−L* (where *L* is the maximum selected lag for the fold). If those *t−1 … t−L* months are also rows the model fit on as **training targets**, there is a subtle leakage path: the model’s adaptation to those rows’ (X, y) relationship can propagate into test predictions via the lag features. The same issue applies to the train → val boundary, with val playing the role of “future” relative to train. 
+Two distinct leakage paths must be closed at every train→val and val→test boundary. The quarantine width must dominate **both** simultaneously.
 
-The quarantine eliminates this path while preserving the continuous out-of-sample test array. Concretely: **the last *L* months of train (and of val) are excluded from being used as targets**, but their feature values remain available so that later rows can reference them via lag features. 
+**Path 1 — Lagged-predictor leakage.** A val (or test) sample at feature time *t* uses lagged predictors SPEI3(*t*−1), SPEI3(*t*−2), …, SPEI3(*t*−*K*), where *K* is the deepest selected lag for the fold. If those *t*−*k* months are themselves training **targets**, the model has effectively fit (X, y) at the same months whose feature values it now reads. Information flows backward through the lag features.
 
-**Adaptive *L***. *L* is determined per-fold from the selected lags: 
+**Path 2 — Rolling-window contamination.** SPEI3 is a 3-month standardized index: SPEI3(τ) is a deterministic function of precipitation at {τ−2, τ−1, τ}. The same *physical precipitation month* can therefore appear inside **both** a training target SPEI3(t_train + *L*) **and** a val/test predictor SPEI3_lag(k)(t'), even when those targets and predictors are at different calendar months and *t' ≠ t_train + L*. The naïve "lead + 2" purge — which covers only the rolling window of the contemporaneous feature — misses this whenever *K* > 0.
 
-for fold in cv\_folds: 
+**Derivation of the required gap.** Let *L* = forecast lead and *K* = max lag among lagged predictors. A sample with feature time *t* touches the following precipitation months:
 
-1\. Provisional split using the planned windows above. 
+| Component | Precip month range |
+| --- | --- |
+| Contemporaneous predictor SPEI3(*t*) | [*t* − 2, *t*] |
+| Deepest lagged predictor SPEI3_lag(*K*)(*t*) = SPEI3(*t* − *K*) | [*t* − *K* − 2, *t* − *K*] |
+| Target SPEI3(*t* + *L*) | [*t* + *L* − 2, *t* + *L*] |
+| **Union (full footprint of one sample)** | **[*t* − *K* − 2, *t* + *L*]** |
 
-2\. Run PACF \+ winter-only CCF on the provisional train → selected\_lags L \= max(selected\_lags) \# e.g. up to 12 for our long-memory variables 3\. Refine indices: 
+Let *T*_train = feature time of the last training sample and *T*_val = *T*_train + gap + 1 = feature time of the first val sample. For their precip footprints to be disjoint:
 
-train\_indices \= months in \[train\_start .. val\_start − L − 1\] 
+```
+   precip-start(val_feature_inputs)   >   precip-end(train_target)
+        (T_val − K − 2)               >        (T_train + L)
+   ⟹  T_val − T_train                 >        L + K + 2
+   ⟹  gap                             ≥        L + K + 2
+```
 
-val\_indices \= months in \[val\_start .. test\_start − L − 1\] 
+That is:
 
-test\_indices \= months in \[test\_start .. test\_end\] \# unchanged 4\. Fit fold-wise standardizer on train\_indices only. 
+> **gap = *L* + *K* + 2** *(months)*
 
-4  
-5\. Train; tune HPs on val\_indices; predict on test\_indices. Test windows are never shrunk — the pooled out-of-sample stitching remains complete. **Effective sizes with *L* \= 12 (worst case; in practice *L* may be smaller):** 
+The three terms each close one specific leakage path:
+- **+*L***: the target shift — keeps any training target out of the val feature window.
+- **+*K***: the deepest lag — keeps the val sample's lagged predictors from reaching back into training targets.
+- **+2**: SPEI3's 3-month rolling window — closes Path 2.
 
-Effective val (HP 
+**Worked example (L = 3, K = 12).** Required gap = 3 + 12 + 2 = **17 months**.
 
-Fold Effective train 
+Consider the train → val boundary with *T*_train = the last train feature time:
 
-1 1950-01 → 1990-12 (41 y) 
+```
+                          train target            quarantine                   val feature
+                          precip footprint        (17 months)                  precip footprint
+                          ↓                                                    ↓
+month axis  →   ...  T-14  ...  T-2 T-1 [T] T+1 T+2 T+3  ▓▓ ... ▓▓ T+18  V-14  ...  V-2 V-1 [V] V+1
+                     └────── feature footprint of last train (X_T) ─────┘
+                                              └── target SPEI3(T+3) ──┘
+                                                                                  └── feature footprint of first val ──→
 
-2 1950-01 → 1995-12 (46 y) 
+  precip-end(train_target) = T + L = T + 3
+  precip-start(val_feature)  = V − K − 2 = (T + 18) − 14 = T + 4
+                                                  T + 3   <   T + 4   →  no shared precip month  ✓
+```
 
-3 1950-01 → 2000-12 (51 y) 
+**Compare with `gap = K` alone** (the previous, leaky choice): val feature time *V* = *T* + 13, deepest val precip reach = *V* − *K* − 2 = *T* − 1, train target precip end = *T* + 3. The val feature footprint [*T* − 1, *T* + 13] **overlaps** the train target precip {*T* + 1, *T* + 2, *T* + 3} → 3 months leaked. The naïve "lead + 2" choice (gap = *L* + 2 = 5) leaks even more.
 
-4 1950-01 → 2005-12 (56 y) 
+**Per-lead gap table** (assuming *K* = 12):
 
-5 1950-01 → 2010-12 (61 y)   
-tuning) Test 
+| Lead L | Required gap = L + K + 2 | Path-2 alone (L + 2) | Old (K only) | Shortfall of old |
+| --- | --- | --- | --- | --- |
+| 1 | 15 | 3 | 12 | 3 months |
+| 3 | 17 | 5 | 12 | 5 months |
+| 6 | 20 | 8 | 12 | 8 months |
 
-1992-01 → 1998-12 (7 y) 2000-01 → 2004-12 1997-01 → 2003-12 (7 y) 2005-01 → 2009-12 2002-01 → 2008-12 (7 y) 2010-01 → 2014-12 2007-01 → 2013-12 (7 y) 2015-01 → 2019-12 2012-01 → 2018-12 (7 y) 2020-01 → 2024-12 
+**Adaptive *K*.** *K* is determined per fold from PACF on the autoregressive variables + winter-only CCF on the climate indices, run over the **provisional** train slice; then `gap = L + K + 2` is applied and indices are finalized:
 
-**Implementation**. Standard libraries (e.g. sklearn.model\_selection.TimeSeriesSplit) do not sup port this reverse-gap logic out of the box. The pipeline implements a custom RollingOriginCV class in droughtmodel/cv.py that yields integer index arrays (train\_idx, val\_idx, test\_idx) with the quarantine subtracted from the end of train and val. Models receive the indices directly and see only the non-quarantined rows. 
+```
+for fold in cv_folds:
+    1. Provisional split using planned windows above.
+    2. Run PACF + winter-only CCF on the provisional train → selected_lags
+       K = max(selected_lags)             # e.g. up to 12 for long-memory vars
+    3. Refine indices:
+         train_indices = months in [train_start .. val_start  − (L + K + 2) − 1]
+         val_indices   = months in [val_start   .. test_start − (L + K + 2) − 1]
+         test_indices  = months in [test_start  .. test_end]   # never shrunk
+    4. Fit fold-wise standardizer on train_indices only.
+    5. Train; tune HPs on val_indices; predict on test_indices.
+```
+
+Test windows are **never** shrunk — the pooled out-of-sample stitching covers the continuous 2000-01 → 2024-12 span regardless of lead.
+
+**Effective fold sizes for the representative case L = 3, K = 12 → gap = 17:**
+
+| Fold | Effective train | Effective val (HP tuning) | Test (5 y, unchanged) |
+| --- | --- | --- | --- |
+| 1 | 1950-01 → 1990-07 (40 y 7 mo) | 1992-01 → 1998-07 (6 y 7 mo) | 2000-01 → 2004-12 |
+| 2 | 1950-01 → 1995-07 (45 y 7 mo) | 1997-01 → 2003-07 (6 y 7 mo) | 2005-01 → 2009-12 |
+| 3 | 1950-01 → 2000-07 (50 y 7 mo) | 2002-01 → 2008-07 (6 y 7 mo) | 2010-01 → 2014-12 |
+| 4 | 1950-01 → 2005-07 (55 y 7 mo) | 2007-01 → 2013-07 (6 y 7 mo) | 2015-01 → 2019-12 |
+| 5 | 1950-01 → 2010-07 (60 y 7 mo) | 2012-01 → 2018-07 (6 y 7 mo) | 2020-01 → 2024-12 |
+
+For *L* = 6 each train/val end shifts back another 3 months; for *L* = 1 each shifts forward 2 months relative to the table above. The cost (5 extra quarantined months per boundary vs the previous *K*-only gap) is small relative to the ~500+ months of train data per fold.
+
+**Implementation.** Standard libraries (e.g. `sklearn.model_selection.TimeSeriesSplit`) do not support this two-sided reverse-gap logic. The pipeline implements `droughtmodel.cv.RollingOriginCV.get_fold_indices(time_coord, fold, max_lag=K, lead=L)`, which returns integer index arrays (`train_idx`, `val_idx`, `test_idx`) with `gap = L + K + 2` subtracted from the end of train and the end of val. The behavior is overridable: setting `configs/cv.yaml::boundary_gap_months` to a positive integer forces that fixed gap for every fold and every lead (e.g. 20 as a worst-case covering *L* ≤ 6, *K* ≤ 12). Models receive the indices directly and only ever see the non-quarantined rows. 
 
 **5\. Standardization** 
 

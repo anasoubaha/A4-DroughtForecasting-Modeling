@@ -2,7 +2,8 @@
 
 Provides:
 - `RollingOriginCV` — 5-fold rolling-origin with continuous test windows and
-  an adaptive boundary-gap quarantine (see v3 §4.1)
+  an adaptive boundary-gap quarantine of `lead + max_lag + 2` months
+  (see v3 §4.1 for the derivation).
 - `FoldStandardizer` — fold-wise z-score standardization with a pre-standardized
   exception list (ENSO, NAO, MO, SPEI3, target — and their lagged variants)
 """
@@ -89,11 +90,22 @@ class RollingOriginCV:
     """5-fold rolling-origin CV with continuous test windows and adaptive quarantine.
 
     Iteration is index-based: callers pass a `time_coord` (xarray time coord or
-    pandas DatetimeIndex) and an integer `max_lag` (typically the per-fold max
-    selected lag from PACF/CCF). The quarantine subtracts `max_lag` months from
-    the END of train and the END of val. Test windows are never shrunk, so the
-    per-fold test predictions stitch into a single continuous out-of-sample
-    array exactly matching the planned test windows.
+    pandas DatetimeIndex), the forecast lead `lead` (L), and the per-fold max
+    selected lag `max_lag` (K) from PACF/CCF. The quarantine is computed as
+
+        gap = L + K + 2                                                [v3 §4.1]
+
+    and subtracted from the END of train and the END of val. The +L term keeps
+    each training target out of the next split's input window; the +K term
+    keeps the deepest lagged predictor out of prior targets; the +2 term
+    closes SPEI3's 3-month rolling-window contamination path (the same precip
+    month feeding both a training target and a val/test SPEI3_lag(k) input).
+
+    Test windows are never shrunk, so per-fold test predictions stitch into a
+    single continuous out-of-sample array (2000-01 → 2024-12 unbroken).
+
+    A FIXED gap can be set via `boundary_gap_months` in configs/cv.yaml
+    (e.g. 20 to cover the worst case L ≤ 6, K ≤ 12).
     """
 
     def __init__(self, folds: list[dict[str, str]], boundary_gap_months: int | None = None):
@@ -118,8 +130,15 @@ class RollingOriginCV:
     def n_folds(self) -> int:
         return len(self.fold_specs)
 
-    def _resolve_gap(self, max_lag: int) -> int:
-        return int(self.fixed_gap) if self.fixed_gap is not None else int(max_lag)
+    def _resolve_gap(self, max_lag: int, lead: int) -> int:
+        """Per-fold boundary gap in months.
+
+        If `boundary_gap_months` is set in config, return it verbatim (override).
+        Otherwise apply the adaptive rule from v3 §4.1: gap = L + max_lag + 2.
+        """
+        if self.fixed_gap is not None:
+            return int(self.fixed_gap)
+        return int(lead) + int(max_lag) + 2
 
     @staticmethod
     def _as_time_index(time_coord) -> pd.DatetimeIndex:
@@ -130,6 +149,7 @@ class RollingOriginCV:
         time_coord,
         fold: FoldSpec,
         max_lag: int = 0,
+        lead: int = 0,
     ) -> FoldIndices:
         """Compute integer indices for one fold with the quarantine applied.
 
@@ -140,11 +160,15 @@ class RollingOriginCV:
         fold
             Planned fold boundaries (`FoldSpec`).
         max_lag
-            Maximum selected lag for this fold (used as boundary gap unless
-            `boundary_gap_months` is fixed in config).
+            Maximum selected lag for this fold (deepest lagged predictor, K).
+        lead
+            Forecast lead in months (L). Targets are SPEI3(t + L).
+
+        The adaptive boundary gap is `lead + max_lag + 2` months (v3 §4.1).
+        Overridden when `boundary_gap_months` is fixed in config.
         """
         time_arr = self._as_time_index(time_coord)
-        gap = self._resolve_gap(max_lag)
+        gap = self._resolve_gap(max_lag, lead)
 
         train_start_i = int(np.searchsorted(time_arr, fold.train_start, side="left"))
         val_start_i = int(np.searchsorted(time_arr, fold.val_start, side="left"))
@@ -178,15 +202,15 @@ class RollingOriginCV:
             test_end=_get(test_end_i_excl - 1, fold.test_end),
         )
 
-    def folds(self, time_coord, max_lag: int = 0) -> Iterator[FoldIndices]:
-        """Yield `FoldIndices` for each fold using `max_lag` as the boundary gap.
+    def folds(self, time_coord, max_lag: int = 0, lead: int = 0) -> Iterator[FoldIndices]:
+        """Yield `FoldIndices` for each fold using `gap = lead + max_lag + 2`.
 
-        Pass a single `max_lag` for all folds (e.g. a fixed worst-case 12), OR
-        call `get_fold_indices` per fold with a per-fold max_lag computed from
+        Pass a single `max_lag` / `lead` for all folds, OR call
+        `get_fold_indices` per fold with per-fold `max_lag` computed from
         per-fold PACF/CCF (the recommended pipeline path).
         """
         for spec in self.fold_specs:
-            yield self.get_fold_indices(time_coord, spec, max_lag=max_lag)
+            yield self.get_fold_indices(time_coord, spec, max_lag=max_lag, lead=lead)
 
 
 # ---------------------------------------------------------------------------
