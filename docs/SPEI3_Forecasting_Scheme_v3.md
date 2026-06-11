@@ -208,36 +208,38 @@ Two distinct leakage paths must be closed at every train→val and val→test bo
 
 **Path 2 — Rolling-window contamination.** SPEI3 is a 3-month standardized index: SPEI3(τ) is a deterministic function of precipitation at {τ−2, τ−1, τ}. The same *physical precipitation month* can therefore appear inside **both** a training target SPEI3(t_train + *L*) **and** a val/test predictor SPEI3_lag(k)(t'), even when those targets and predictors are at different calendar months and *t' ≠ t_train + L*. The naïve "lead + 2" purge — which covers only the rolling window of the contemporaneous feature — misses this whenever *K* > 0.
 
-**Derivation of the required gap.** Let *L* = forecast lead and *K* = max lag among lagged predictors. A sample with feature time *t* touches the following precipitation months:
+**Derivation of the required gap.** Only variables whose lag features share **raw precipitation or PET ingredients** with the SPEI3 target can leak through shared months. We call these the *precip-touching* variables. In our feature set: SPEI3 (and its lags), precip (and its lags), and PET (only contemporaneous in our config). All other variables — NAO, ENSO, MO, RZSM, TCWV, VPD, wind, solar, tmin, tmax — are derived from **independent data sources** (NOAA pressure indices, ERA5 atmosphere, ERA5 soil moisture), so their lag features have only legitimate statistical dependence with future SPEI3; they impose **no** quarantine constraint.
 
-| Component | Precip month range |
-| --- | --- |
-| Contemporaneous predictor SPEI3(*t*) | [*t* − 2, *t*] |
-| Deepest lagged predictor SPEI3_lag(*K*)(*t*) = SPEI3(*t* − *K*) | [*t* − *K* − 2, *t* − *K*] |
-| Target SPEI3(*t* + *L*) | [*t* + *L* − 2, *t* + *L*] |
-| **Union (full footprint of one sample)** | **[*t* − *K* − 2, *t* + *L*]** |
+Per precip-touching feature class, the precip-month footprint at val feature time *t* is:
 
-Let *T*_train = feature time of the last training sample and *T*_val = *T*_train + gap + 1 = feature time of the first val sample. For their precip footprints to be disjoint:
+| Feature class | Precip months touched | Disjoint-from-train-target constraint |
+| --- | --- | --- |
+| Contemporaneous precip(*t*), PET(*t*) | {*t*} | gap ≥ *L* |
+| Lagged precip_lag(*k*)(*t*), PET_lag(*k*)(*t*) | {*t* − *k*} | gap ≥ *L* + *k* |
+| Contemporaneous SPEI3(*t*) | [*t* − 2, *t*] | gap ≥ *L* + 2 |
+| Lagged SPEI3_lag(*k*)(*t*) | [*t* − *k* − 2, *t* − *k*] | gap ≥ *L* + *k* + 2 |
 
-```
-   precip-start(val_feature_inputs)   >   precip-end(train_target)
-        (T_val − K − 2)               >        (T_train + L)
-   ⟹  T_val − T_train                 >        L + K + 2
-   ⟹  gap                             ≥        L + K + 2
-```
+Taking the maximum over all present precip-touching feature classes, define the **effective lag**:
 
-That is:
+$$K_\text{eff} \;=\; \max\!\Big( 0,\;\; \max_{k \in \text{SPEI3 lags}}\!k,\;\; \max_{k \in \text{precip lags}}(k - 2),\;\; \max_{k \in \text{PET lags}}(k - 2) \Big)$$
 
-> **gap = *L* + *K* + 2** *(months)*
+so that
 
-The three terms each close one specific leakage path:
+> **gap = *L* + *K*ₑff + 2**
+
+closes all strict precip-month leakage. The floor at 0 enforces gap ≥ *L* + 2, which is the constraint from the contemporaneous SPEI3 feature (always present).
+
+**Why the +2 vanishes for precip/PET lags but not SPEI3 lags.** SPEI3 is a 3-month rolling sum, so a SPEI3 lag at depth *k* touches a 3-month window [*t*−*k*−2, *t*−*k*] — the +2 covers the rolling-window width. Raw precip and PET are point-month quantities, so a precip lag at depth *k* touches a single month {*t* − *k*} — the +2 is unnecessary and we subtract it back out in the *K*ₑff formula.
+
+**The three terms each close one specific leakage path:**
 - **+*L***: the target shift — keeps any training target out of the val feature window.
-- **+*K***: the deepest lag — keeps the val sample's lagged predictors from reaching back into training targets.
-- **+2**: SPEI3's 3-month rolling window — closes Path 2.
+- **+*K*ₑff**: the deepest precip-touching lag — keeps val features from reaching back into training-target precip months.
+- **+2**: SPEI3's 3-month rolling window — closes the rolling-window contamination path.
 
-**Worked example (L = 3, K = 12).** Required gap = 3 + 12 + 2 = **17 months**.
+**Worked example A — SPEI3 dominates** (L = 3; PACF selects SPEI3 lags up to 12; everything else shallow or non-precip-touching).
+*K*ₑff = max(12, …) = 12 → gap = 3 + 12 + 2 = **17 months**.
 
-Consider the train → val boundary with *T*_train = the last train feature time:
+Time-axis at the train → val boundary with *T* = last train feature time:
 
 ```
                           train target            quarantine                   val feature
@@ -248,39 +250,56 @@ month axis  →   ...  T-14  ...  T-2 T-1 [T] T+1 T+2 T+3  ▓▓ ... ▓▓ T+1
                                               └── target SPEI3(T+3) ──┘
                                                                                   └── feature footprint of first val ──→
 
-  precip-end(train_target) = T + L = T + 3
-  precip-start(val_feature)  = V − K − 2 = (T + 18) − 14 = T + 4
+  precip-end(train_target)   = T + L = T + 3
+  precip-start(val_feature)  = V − K_eff − 2 = (T + 18) − 14 = T + 4
                                                   T + 3   <   T + 4   →  no shared precip month  ✓
 ```
 
-**Compare with `gap = K` alone** (the previous, leaky choice): val feature time *V* = *T* + 13, deepest val precip reach = *V* − *K* − 2 = *T* − 1, train target precip end = *T* + 3. The val feature footprint [*T* − 1, *T* + 13] **overlaps** the train target precip {*T* + 1, *T* + 2, *T* + 3} → 3 months leaked. The naïve "lead + 2" choice (gap = *L* + 2 = 5) leaks even more.
+**Worked example B — precip lag dominates** (L = 3; SPEI3 PACF selects only lag 2; PACF on precip selects lag 12; NAO CCF selects lag 12 but that is independent of precip).
+Per-variable contributions: SPEI3 → 2; precip → 12 − 2 = 10; NAO → ignored. *K*ₑff = max(2, 10) = 10 → gap = 3 + 10 + 2 = **15 months**.
 
-**Per-lead gap table** (assuming *K* = 12):
+**Worked example C — no precip-touching lags** (L = 3; PACF picks nothing for SPEI3 or precip; only NAO and RZSM lags survive). *K*ₑff = 0 → gap = 3 + 0 + 2 = **5 months** (the contemporaneous-SPEI3 floor).
 
-| Lead L | Required gap = L + K + 2 | Path-2 alone (L + 2) | Old (K only) | Shortfall of old |
-| --- | --- | --- | --- | --- |
-| 1 | 15 | 3 | 12 | 3 months |
-| 3 | 17 | 5 | 12 | 5 months |
-| 6 | 20 | 8 | 12 | 8 months |
+**Compare with the naïve "max over all lags" choice** (the previous, conservative implementation):
 
-**Adaptive *K*.** *K* is determined per fold from PACF on the autoregressive variables + winter-only CCF on the climate indices, run over the **provisional** train slice; then `gap = L + K + 2` is applied and indices are finalized:
+| Configuration | Naïve *K*ₐₗₗ | Strict *K*ₑff | Gap @ L=3 (naïve) | Gap @ L=3 (strict) | Months saved |
+| --- | --- | --- | --- | --- | --- |
+| SPEI3 deep (12), others shallow | 12 | 12 | 17 | 17 | 0 |
+| Precip lag 12, SPEI3 lag 2, NAO 12 | 12 | 10 | 17 | 15 | 2 |
+| NAO/ENSO lag 12, no SPEI3 / precip lags | 12 | 0 | 17 | 5 | **12** |
+| Empty selection | 0 | 0 | 5 | 5 | 0 |
+
+The savings depend on how lag selection distributes across precip-touching vs independent variables, and can be substantial when teleconnection indices (NAO, ENSO, MO) drive the deep lags.
+
+**Compare with `gap = K` alone** (a pre-fix bug): val feature deepest precip reach = *V* − *K* − 2 = *T* − 1, which **overlaps** the train target precip {*T* + 1, *T* + 2, *T* + 3}. The naïve "lead + 2" purge proposed by some authors covers only the SPEI3 rolling window of the contemporaneous feature and misses lag contamination entirely.
+
+**Adaptive *K*ₑff.** *K*ₑff is determined per fold from PACF on the autoregressive variables + winter-only CCF on the climate indices, run over the **provisional** train slice; the per-variable lag dict is then mapped through the `compute_quarantine_max_lag` helper (precip-touching variables only) to obtain *K*ₑff. The gap `L + K_eff + 2` is applied and indices are finalized:
 
 ```
 for fold in cv_folds:
     1. Provisional split using planned windows above.
     2. Run PACF + winter-only CCF on the provisional train → selected_lags
-       K = max(selected_lags)             # e.g. up to 12 for long-memory vars
-    3. Refine indices:
-         train_indices = months in [train_start .. val_start  − (L + K + 2) − 1]
-         val_indices   = months in [val_start   .. test_start − (L + K + 2) − 1]
+       (a dict variable_name → list of selected lag depths).
+    3. Compute K_eff:
+         K_eff = max(
+             0,
+             max(selected_lags["spei3"], default=0),
+             max(selected_lags["precip"], default=2) − 2,
+             max(selected_lags["pet"],    default=2) − 2,
+         )
+       (variables not in the precip-touching set are ignored).
+    4. Refine indices:
+         gap = L + K_eff + 2
+         train_indices = months in [train_start .. val_start  − gap − 1]
+         val_indices   = months in [val_start   .. test_start − gap − 1]
          test_indices  = months in [test_start  .. test_end]   # never shrunk
-    4. Fit fold-wise standardizer on train_indices only.
-    5. Train; tune HPs on val_indices; predict on test_indices.
+    5. Fit fold-wise standardizer on train_indices only.
+    6. Train; tune HPs on val_indices; predict on test_indices.
 ```
 
 Test windows are **never** shrunk — the pooled out-of-sample stitching covers the continuous 2000-01 → 2024-12 span regardless of lead.
 
-**Effective fold sizes for the representative case L = 3, K = 12 → gap = 17:**
+**Effective fold sizes for the worst case L = 3, *K*ₑff = 12 → gap = 17** (e.g. SPEI3 PACF selects lag 12). For lighter precip-touching lag selections the gap shrinks toward the *L* + 2 floor; the per-fold log emitted by the pipeline records both *K*ₑff and the resulting train/val sizes.
 
 | Fold | Effective train | Effective val (HP tuning) | Test (5 y, unchanged) |
 | --- | --- | --- | --- |
@@ -292,7 +311,12 @@ Test windows are **never** shrunk — the pooled out-of-sample stitching covers 
 
 For *L* = 6 each train/val end shifts back another 3 months; for *L* = 1 each shifts forward 2 months relative to the table above. The cost (5 extra quarantined months per boundary vs the previous *K*-only gap) is small relative to the ~500+ months of train data per fold.
 
-**Implementation.** Standard libraries (e.g. `sklearn.model_selection.TimeSeriesSplit`) do not support this two-sided reverse-gap logic. The pipeline implements `droughtmodel.cv.RollingOriginCV.get_fold_indices(time_coord, fold, max_lag=K, lead=L)`, which returns integer index arrays (`train_idx`, `val_idx`, `test_idx`) with `gap = L + K + 2` subtracted from the end of train and the end of val. The behavior is overridable: setting `configs/cv.yaml::boundary_gap_months` to a positive integer forces that fixed gap for every fold and every lead (e.g. 20 as a worst-case covering *L* ≤ 6, *K* ≤ 12). Models receive the indices directly and only ever see the non-quarantined rows. 
+**Implementation.** Standard libraries (e.g. `sklearn.model_selection.TimeSeriesSplit`) do not support this two-sided reverse-gap logic. The pipeline implements:
+
+- `droughtmodel.cv.compute_quarantine_max_lag(selected_lags)` — maps the per-variable lag dict to *K*ₑff using the strict precip-touching rule above.
+- `droughtmodel.cv.RollingOriginCV.get_fold_indices(time_coord, fold, max_lag=K_eff, lead=L)` — returns integer index arrays (`train_idx`, `val_idx`, `test_idx`) with `gap = L + K_eff + 2` subtracted from the end of train and the end of val. Models receive the indices directly and only ever see the non-quarantined rows.
+
+The behavior is overridable: setting `configs/cv.yaml::boundary_gap_months` to a positive integer forces that fixed gap for every fold and every lead (e.g. 20 as a worst-case covering *L* ≤ 6, *K*ₑff ≤ 12). A caller that does not want the per-variable accounting can pass any conservative integer for `max_lag` (e.g. the max over all selected lags); the function will compute `gap = L + max_lag + 2` as before — over-quarantining is safe, just data-inefficient. 
 
 **5\. Standardization** 
 

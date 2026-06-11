@@ -30,6 +30,75 @@ def load_cv_config(path: str | Path = "configs/cv.yaml") -> dict[str, Any]:
         return yaml.safe_load(f)
 
 
+# Default variable classes for the strict-quarantine accounting (v3 §4.1).
+# Only variables whose lag features share raw precipitation/PET ingredients with
+# the SPEI3 target can leak through shared months; all others (ERA5 atmosphere,
+# soil moisture, climate indices) contribute only legitimate statistical signal.
+SPEI3_LIKE_VARS = ("spei3",)              # 3-month rolling-window features
+PRECIP_POINT_VARS = ("precip", "pet")     # single-month features (raw ingredients of SPEI3)
+
+
+def compute_quarantine_max_lag(
+    lags_by_variable: dict[str, Any],
+    spei3_like_vars: tuple[str, ...] = SPEI3_LIKE_VARS,
+    precip_point_vars: tuple[str, ...] = PRECIP_POINT_VARS,
+) -> int:
+    """Effective max_lag for the boundary gap, per v3 §4.1 strict accounting.
+
+    The boundary gap formula is `gap = lead + max_lag + 2`. To make this single
+    parameter cover the per-variable leakage rules, we map each variable's
+    selected lags into a contribution to `max_lag`:
+
+      - SPEI3-like lags (k > 0): contribute `k`. The +2 in the gap formula
+        then becomes `k + 2`, matching the 3-month rolling-window footprint.
+      - Precip/PET lags (k > 0): contribute `k − 2`. The +2 in the gap
+        formula then becomes `k`, matching the single-month footprint.
+      - All other variables: ignored (independent data sources — no shared
+        precipitation ingredients with the SPEI3 target).
+
+    A floor of 0 is applied so that `gap ≥ lead + 2`, which is the contribution
+    of the contemporaneous SPEI3 feature (always present in our config).
+
+    Parameters
+    ----------
+    lags_by_variable
+        Mapping `variable_name -> selected_lags`. Each value can be an int,
+        a list of ints, or None / empty. Variable names not in `spei3_like_vars`
+        or `precip_point_vars` are ignored.
+    spei3_like_vars
+        Variable names whose lag features are 3-month rolling sums.
+    precip_point_vars
+        Variable names whose lag features are single precip/PET months.
+
+    Returns
+    -------
+    int
+        K_eff. Pass to `get_fold_indices(..., max_lag=K_eff, lead=L)` to obtain
+        the strict gap `L + K_eff + 2` covering only precip-touching leakage.
+    """
+    def _to_lags(v: Any) -> list[int]:
+        if v is None:
+            return []
+        if isinstance(v, (int, np.integer)):
+            return [int(v)]
+        try:
+            return [int(x) for x in v]
+        except TypeError:
+            return []
+
+    components: list[int] = [0]   # floor from contemporaneous SPEI3
+    for var, lags in lags_by_variable.items():
+        lag_list = _to_lags(lags)
+        if not lag_list:
+            continue
+        if var in spei3_like_vars:
+            components.extend(lag_list)
+        elif var in precip_point_vars:
+            components.extend(k - 2 for k in lag_list)
+        # else: independent data source, no contribution
+    return max(components)
+
+
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
@@ -90,16 +159,24 @@ class RollingOriginCV:
     """5-fold rolling-origin CV with continuous test windows and adaptive quarantine.
 
     Iteration is index-based: callers pass a `time_coord` (xarray time coord or
-    pandas DatetimeIndex), the forecast lead `lead` (L), and the per-fold max
-    selected lag `max_lag` (K) from PACF/CCF. The quarantine is computed as
+    pandas DatetimeIndex), the forecast lead `lead` (L), and an effective
+    `max_lag` (K_eff) for the precip-touching feature set. The quarantine is
 
-        gap = L + K + 2                                                [v3 §4.1]
+        gap = L + K_eff + 2                                            [v3 §4.1]
 
-    and subtracted from the END of train and the END of val. The +L term keeps
-    each training target out of the next split's input window; the +K term
-    keeps the deepest lagged predictor out of prior targets; the +2 term
-    closes SPEI3's 3-month rolling-window contamination path (the same precip
-    month feeding both a training target and a val/test SPEI3_lag(k) input).
+    and is subtracted from the END of train and the END of val. The +L term
+    keeps every training target out of the next split's feature window; the
+    +K_eff term keeps the deepest precip-derived lag predictor from reaching
+    back into prior targets; the +2 term closes SPEI3's 3-month rolling-window
+    contamination path.
+
+    Strict accounting (v3 §4.1): K_eff is computed by `compute_quarantine_max_lag`
+    from the per-variable selected-lag dict. Only SPEI3-like and precip/PET
+    lag features contribute — all other variables (ERA5 atmosphere, soil
+    moisture, climate indices) are independent data sources and impose no
+    leakage constraint. For backward compatibility, `get_fold_indices` still
+    accepts a single `max_lag` int; pass the conservative max-across-all-lags
+    if you don't want to bother with per-variable accounting.
 
     Test windows are never shrunk, so per-fold test predictions stitch into a
     single continuous out-of-sample array (2000-01 → 2024-12 unbroken).
@@ -160,7 +237,11 @@ class RollingOriginCV:
         fold
             Planned fold boundaries (`FoldSpec`).
         max_lag
-            Maximum selected lag for this fold (deepest lagged predictor, K).
+            Effective max lag for the boundary gap (K_eff). Use
+            `compute_quarantine_max_lag(selected_lags)` to obtain the strict
+            value (precip-touching variables only); or pass a conservative
+            integer (e.g. max over all selected lags) if per-variable
+            accounting is not desired.
         lead
             Forecast lead in months (L). Targets are SPEI3(t + L).
 
