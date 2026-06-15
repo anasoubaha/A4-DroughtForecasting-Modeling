@@ -1,0 +1,12 @@
+# Lasso — L1 penalty.
+# Performs embedded feature selection (v3 §6); no separate pre-filter.
+# v3 §7.1.
+
+name: lasso
+class: lasso
+params:
+  alpha: 0.01      # default; full HP grid is logspace(-3, 3, 13)
+  max_iter: 10000  # coordinate descent convergence; standardized features → fast
+
+# HP search grid (v3 §8):
+#   alpha ∈ logspace(-3, 3, 13)   → 13 combos

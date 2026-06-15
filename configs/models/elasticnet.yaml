@@ -1,0 +1,15 @@
+# Elastic Net — L1 + L2 penalty.
+# Performs embedded feature selection (v3 §6); no separate pre-filter.
+# v3 §7.1.
+
+name: elasticnet
+class: elasticnet
+params:
+  alpha: 0.01
+  l1_ratio: 0.5    # 0 = pure Ridge, 1 = pure Lasso
+  max_iter: 10000
+
+# HP search grid (v3 §8):
+#   alpha    ∈ logspace(-3, 3, 7)
+#   l1_ratio ∈ {0.1, 0.3, 0.5, 0.7, 0.9}
+#   → 35 combos

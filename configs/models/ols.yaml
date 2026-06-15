@@ -1,0 +1,7 @@
+# OLS — Ordinary Least Squares (no regularization).
+# All Section-3 features pass through; no embedded selection.
+# v3 §7.1.
+
+name: ols
+class: ols
+params: {}

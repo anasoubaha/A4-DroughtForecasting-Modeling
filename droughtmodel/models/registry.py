@@ -10,13 +10,25 @@ from droughtmodel.models.baselines import (
     ClimatologyBaseline,
     PersistenceBaseline,
 )
+from droughtmodel.models.linear import (
+    ElasticNetModel,
+    LassoModel,
+    LinearRegressionModel,
+    RidgeModel,
+)
+from droughtmodel.models.tree import RandomForestModel, XGBoostModel
 
 
 REGISTRY: dict[str, Type[BaseModel]] = {
     "climatology": ClimatologyBaseline,
     "persistence": PersistenceBaseline,
     "ar": ARBaseline,
-    # Linear / RF / XGBoost added in Phases 7–8
+    "ols": LinearRegressionModel,
+    "ridge": RidgeModel,
+    "lasso": LassoModel,
+    "elasticnet": ElasticNetModel,
+    "rf": RandomForestModel,
+    "xgboost": XGBoostModel,
 }
 
 

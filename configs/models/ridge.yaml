@@ -1,0 +1,11 @@
+# Ridge regression — L2 penalty.
+# All Section-3 features pass through; L2 absorbs multicollinearity.
+# v3 §7.1.
+
+name: ridge
+class: ridge
+params:
+  alpha: 1.0       # default; full HP grid is logspace(-3, 3, 13)
+
+# HP search grid (v3 §8):
+#   alpha ∈ logspace(-3, 3, 13)   → 13 combos
