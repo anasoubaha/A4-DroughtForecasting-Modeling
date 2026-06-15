@@ -314,7 +314,9 @@ The diagram below traces the order of operations for one fold, tying together §
                                   |
                                   v
    +------------------------------------------------------------------+
-   | 8. REFIT  on (train_idx U val_idx) with best_hp                  |
+   | 8. REFIT  with best_hp on the CONTIGUOUS slice                   |
+   |    [train_start .. test_start - gap - 1]                         |
+   |    (reclaims the train-val gap; only val->test gap remains)      |
    +------------------------------------------------------------------+
                                   |
                                   v
@@ -372,7 +374,7 @@ Steps 1–6 are pure per-fold preprocessing; steps 7–10 are per (fold, model_f
 ```
 for fold in cv_folds:
     best_hp = search(model_type, X_train, y_train, X_val, y_val)
-    final_model = model_type(best_hp).fit(X_train U X_val, y_train U y_val)
+    final_model = model_type(best_hp).fit([train_start, test_start - gap - 1], y_train U y_val)
     preds = final_model.predict(X_test)
 ```
 

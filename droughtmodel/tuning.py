@@ -98,11 +98,6 @@ def _fit_one(
     return model
 
 
-def _concat_time(train: xr.Dataset, val: xr.Dataset) -> xr.Dataset:
-    """Stack train + val along the `time` axis (train first, val after)."""
-    return xr.concat([train, val], dim="time")
-
-
 # ---------------------------------------------------------------------------
 # Grid search
 # ---------------------------------------------------------------------------
@@ -264,6 +259,7 @@ def tune_and_refit(
     grid: dict[str, Iterable[Any]] | list[dict[str, Any]],
     train: xr.Dataset,
     val: xr.Dataset,
+    refit_dataset: xr.Dataset,
     *,
     scoring: str | Callable = "neg_mse",
     fixed_params: dict[str, Any] | None = None,
@@ -272,16 +268,26 @@ def tune_and_refit(
     search_fn: Callable = grid_search,
     search_kwargs: dict[str, Any] | None = None,
 ) -> tuple[BaseModel, SearchResult]:
-    """Protocol A: tune on val, refit on (train ∪ val) with the best HP.
+    """Protocol A: tune on val, refit on a contiguous span, evaluate on test.
 
     Parameters
     ----------
+    train, val
+        Quarantined slices used for the HP search only. ``val`` is held out
+        during the search so it can score candidate HP combinations.
+    refit_dataset
+        The contiguous time slice ``[train_start .. test_start − gap − 1]``
+        used for the final refit. This **reclaims the train↔val quarantine
+        gap** (which was only needed to hold val out during the search),
+        leaving only the val→test quarantine at the right edge to protect
+        the test set. The caller (Phase 10 orchestrator) is responsible for
+        constructing this slice from the original full dataset.
     refit_with_best_iteration
         If True and the search's best model exposes ``best_iteration``
         (XGBoost early stopping), use that value as ``n_estimators`` for the
         refit and disable further early stopping. Use this for XGBoost so
-        that the refit on train+val uses the same number of trees that
-        achieved the best val score.
+        the refit uses the same number of trees that achieved the best val
+        score.
     search_fn
         Which search backend to use: :func:`grid_search` (default) or
         :func:`optuna_search`. When using Optuna, pass the search space
@@ -291,8 +297,8 @@ def tune_and_refit(
     Returns
     -------
     (final_model, search_result)
-        ``final_model`` is fitted on the concatenated (train + val) slice.
-        ``search_result`` carries the per-combo scores and timing for logging.
+        ``final_model`` is fitted on ``refit_dataset``. ``search_result``
+        carries the per-combo scores and timing for logging.
     """
     sk = dict(search_kwargs or {})
     sk.setdefault("scoring", scoring)
@@ -312,6 +318,5 @@ def tune_and_refit(
             refit_params["n_estimators"] = int(bi) + 1   # 0-indexed → count
             refit_params["early_stopping_rounds"] = None
 
-    refit_ds = _concat_time(train, val)
-    final_model = model_class(**refit_params).fit(refit_ds)
+    final_model = model_class(**refit_params).fit(refit_dataset)
     return final_model, res

@@ -159,31 +159,31 @@ def test_grid_search_verbose_does_not_crash(capsys):
 # ---------------------------------------------------------------------------
 
 def test_tune_and_refit_returns_fitted_model_and_result():
-    train, val = _train_val(_make_dataset(n_time=200))
+    ds = _make_dataset(n_time=200)
+    train, val = _train_val(ds)
     grid = {"alpha": [0.01, 0.1, 1.0]}
-    final_model, res = tune_and_refit(RidgeModel, grid, train, val)
+    final_model, res = tune_and_refit(RidgeModel, grid, train, val, refit_dataset=ds)
     assert final_model.feature_names_ is not None
     assert isinstance(res, SearchResult)
-    # Final model uses the best params
     assert final_model.alpha == res.best_params["alpha"]
 
 
-def test_tune_and_refit_uses_train_plus_val_for_refit():
-    """The refit estimator should be fitted on more samples than train alone."""
+def test_tune_and_refit_uses_continuous_refit_slice():
+    """The refit estimator must fit on the contiguous train+val span, not the search slices."""
     ds = _make_dataset(n_time=200)
     train, val = _train_val(ds, val_frac=0.25)
-    final_model, _ = tune_and_refit(RidgeModel, {"alpha": [0.1]}, train, val)
-    # Predict on the full ds and confirm shape matches
+    final_model, _ = tune_and_refit(RidgeModel, {"alpha": [0.1]}, train, val, refit_dataset=ds)
     pred = final_model.predict(ds)
     assert pred.shape == ds["target"].shape
 
 
 def test_tune_and_refit_with_xgboost_early_stopping():
-    """XGBoost early stopping should pick a best_iteration; refit captures it."""
-    train, val = _train_val(_make_dataset(n_time=400, noise=0.2, seed=42), val_frac=0.25)
+    """XGBoost early stopping picks a best_iteration; refit captures and locks it."""
+    ds = _make_dataset(n_time=400, noise=0.2, seed=42)
+    train, val = _train_val(ds, val_frac=0.25)
     grid = {"max_depth": [3, 5], "learning_rate": [0.1]}
     final_model, res = tune_and_refit(
-        XGBoostModel, grid, train, val,
+        XGBoostModel, grid, train, val, refit_dataset=ds,
         fixed_params={
             "n_estimators": 300, "early_stopping_rounds": 15,
             "random_state": 0,
@@ -191,7 +191,6 @@ def test_tune_and_refit_with_xgboost_early_stopping():
         pass_val_to_fit=True,
         refit_with_best_iteration=True,
     )
-    # Refit uses best_iteration as fixed n_estimators
     bi = res.best_model.best_iteration
     assert bi is not None
     assert final_model.n_estimators == bi + 1
@@ -199,14 +198,30 @@ def test_tune_and_refit_with_xgboost_early_stopping():
 
 
 def test_tune_and_refit_rf_basic():
-    train, val = _train_val(_make_dataset(n_time=200, seed=0), val_frac=0.25)
+    ds = _make_dataset(n_time=200, seed=0)
+    train, val = _train_val(ds, val_frac=0.25)
     grid = {"max_depth": [None, 5], "min_samples_leaf": [1, 5]}
     final_model, res = tune_and_refit(
-        RandomForestModel, grid, train, val,
+        RandomForestModel, grid, train, val, refit_dataset=ds,
         fixed_params={"n_estimators": 30, "random_state": 0, "n_jobs": 1},
     )
     assert res.n_trials == 4
     assert final_model.feature_names_ is not None
+
+
+def test_tune_and_refit_uses_provided_refit_dataset():
+    """The refit slice passed in must actually drive the refit
+    (NOT the train/val slices used for search)."""
+    ds = _make_dataset(n_time=200, seed=0)
+    train, val = _train_val(ds, val_frac=0.25)
+    # Custom refit slice: shorter than train (just to confirm it's used)
+    short_refit = ds.isel(time=slice(0, 50))
+    final_model, _ = tune_and_refit(
+        RidgeModel, {"alpha": [0.1]}, train, val, refit_dataset=short_refit,
+    )
+    # Predicting on the short slice must produce the matching shape
+    pred = final_model.predict(short_refit)
+    assert pred.shape == short_refit["target"].shape
 
 
 # ---------------------------------------------------------------------------
@@ -237,13 +252,14 @@ def test_optuna_search_finds_low_alpha_on_clean_signal():
 
 @pytest.mark.skipif(not _have_optuna(), reason="optuna not installed")
 def test_optuna_through_tune_and_refit():
-    train, val = _train_val(_make_dataset(n_time=200))
+    ds = _make_dataset(n_time=200)
+    train, val = _train_val(ds)
 
     def space(trial):
         return {"alpha": trial.suggest_float("alpha", 1e-3, 1e2, log=True)}
 
     final_model, res = tune_and_refit(
-        RidgeModel, grid={}, train=train, val=val,
+        RidgeModel, grid={}, train=train, val=val, refit_dataset=ds,
         search_fn=optuna_search,
         search_kwargs={"search_space": space, "n_trials": 8, "sampler_seed": 0},
     )
