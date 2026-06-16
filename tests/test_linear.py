@@ -231,3 +231,68 @@ def test_all_linear_models_implement_basemodel_interface(factory):
     fi = m.feature_importance()
     assert fi is not None
     assert set(fi) == set(m.feature_names_)
+
+
+# ---------------------------------------------------------------------------
+# Heterogeneous feature dimensions (regression — real-data shape mismatch)
+# ---------------------------------------------------------------------------
+
+def _make_heterogeneous_dataset(n_time: int = 150, seed: int = 0) -> xr.Dataset:
+    """Mixed-dimensionality features: 3-D gridded vars + 1-D climate indices.
+
+    Mirrors the real-data shape that broke `_stack_xy` before broadcasting
+    was added: NAO/ENSO/MO arrive as `(time,)` series alongside `(time, lat, lon)`
+    predictors. The target depends on both kinds.
+    """
+    rng = np.random.default_rng(seed)
+    n_lat, n_lon = 3, 3
+    times = pd.date_range("1950-01", periods=n_time, freq="MS")
+    lats = np.linspace(28, 36, n_lat)
+    lons = np.linspace(-13, -1, n_lon)
+    coords3d = {"time": times, "lat": lats, "lon": lons}
+
+    # 3-D gridded predictors
+    spei3 = rng.standard_normal((n_time, n_lat, n_lon))
+    precip = rng.standard_normal((n_time, n_lat, n_lon))
+
+    # 1-D climate indices (same value at every cell at a given month)
+    nao = rng.standard_normal(n_time)
+    enso = rng.standard_normal(n_time)
+
+    # Target depends on a gridded var AND a 1-D index
+    target = (
+        1.2 * spei3
+        + 0.6 * nao[:, None, None]                          # broadcast manually
+        + 0.1 * rng.standard_normal((n_time, n_lat, n_lon))
+    )
+
+    return xr.Dataset({
+        "spei3": xr.DataArray(spei3, dims=("time","lat","lon"), coords=coords3d),
+        "precip": xr.DataArray(precip, dims=("time","lat","lon"), coords=coords3d),
+        "nao":   xr.DataArray(nao,  dims=("time",), coords={"time": times}),
+        "enso":  xr.DataArray(enso, dims=("time",), coords={"time": times}),
+        "target": xr.DataArray(target, dims=("time","lat","lon"), coords=coords3d),
+    })
+
+
+def test_fit_predict_with_heterogeneous_feature_dims():
+    """1-D climate indices alongside 3-D gridded vars must fit without shape errors."""
+    ds = _make_heterogeneous_dataset(n_time=200, seed=42)
+    m = RidgeModel(alpha=0.1).fit(ds)
+    assert m.feature_names_ is not None
+    assert set(m.feature_names_) == {"enso", "nao", "precip", "spei3"}
+    pred = m.predict(ds)
+    assert pred.dims == ds["target"].dims
+    assert pred.shape == ds["target"].shape
+
+
+def test_heterogeneous_features_recover_known_signal():
+    """OLS on the mixed-dim dataset must recover ~1.2 for spei3 and ~0.6 for nao."""
+    ds = _make_heterogeneous_dataset(n_time=400, seed=42)
+    m = LinearRegressionModel().fit(ds)
+    fi = m.feature_importance()
+    assert fi is not None
+    assert abs(fi["spei3"] - 1.2) < 0.05
+    assert abs(fi["nao"] - 0.6) < 0.05
+    assert abs(fi["precip"]) < 0.05
+    assert abs(fi["enso"]) < 0.05

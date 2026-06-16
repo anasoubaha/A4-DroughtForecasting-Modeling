@@ -22,7 +22,7 @@ env/
 data/
 #results/predictions/
 #results/figures/
-results/logs/
+#results/logs/
 
 # Note: results/metrics/ is kept in git (paper-ready numbers)
 

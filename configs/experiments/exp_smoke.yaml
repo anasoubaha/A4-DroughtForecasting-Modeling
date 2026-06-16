@@ -1,0 +1,64 @@
+# Smoke experiment — fast wiring validation + per-model timing before the full sweep.
+#
+# Runs every model family at a single lead (L=3) across all 5 folds.
+# - Baselines: climatology, persistence, AR(p)
+# - Linear with shrunk HP grids: ridge, lasso, elasticnet
+# - Trees with 1-combo grids: rf, xgboost  (just to time their per-fit cost)
+#
+# Output filenames are prefixed with "test_" so a smoke run does not overwrite
+# the full sweep's outputs. After this completes, inspect:
+#   results/predictions/test_pooled_lead3.nc
+#   results/metrics/test_metrics_lead3.csv      (climatology MSSS-vs-clim ≈ 0)
+#   results/logs/test_fold_runs.csv             (40 rows = 5 folds × 8 models)
+#   results/logs/test_feature_status.csv
+#
+# Expected wall time on a laptop: ~5-15 minutes (RF + XGBoost dominate).
+# Use the per-fit timings logged in real time to extrapolate the full sweep.
+
+name: smoke
+
+file_prefix: "test_"
+
+leads: [3]
+
+modeling_unit: global
+
+models:
+  - climatology
+  - persistence
+  - ar
+  - ridge
+  - lasso
+  - elasticnet
+  - rf
+  - xgboost
+
+# Shrunk HP grids — keep the wiring exercised but each search small.
+# Trees use 1 combo so the wall time reflects a single fit (the full grid
+# multiplies this cost by 108 / 144).
+hp_grids:
+  ridge:
+    alpha: [0.01, 1.0, 100.0]            # 3 combos (vs 13 in full)
+  lasso:
+    alpha: [0.001, 0.01, 0.1, 1.0]       # 4 combos (vs 13 in full)
+  elasticnet:
+    alpha: [0.001, 0.01, 0.1]            # 3
+    l1_ratio: [0.3, 0.7]                  # 2  → 6 combos (vs 35 in full)
+  rf:
+    n_estimators: [200]                   # 1
+    max_depth: [10]                       # 1
+    min_samples_leaf: [5]                 # 1
+    max_features: ["sqrt"]                # 1   → 1 combo (vs 108 in full)
+  xgboost:
+    max_depth: [6]                        # 1
+    learning_rate: [0.1]                  # 1
+    subsample: [1.0]                      # 1
+    colsample_bytree: [1.0]               # 1
+    reg_lambda: [1.0]                     # 1
+    min_child_weight: [1]                 # 1   → 1 combo (vs 144 in full);
+                                          #      n_estimators still set by early stopping
+
+output:
+  predictions_dir: results/predictions
+  metrics_dir: results/metrics
+  logs_dir: results/logs

@@ -29,6 +29,17 @@ def _stack_xy(
 ) -> tuple[np.ndarray, np.ndarray | None, xr.DataArray]:
     """Stack `(time, lat, lon, n_features) → (n_samples, n_features)`.
 
+    Features may have heterogeneous dimensions:
+      - 3-D gridded predictors with dims ``(time, lat, lon)``,
+      - 1-D climate indices with dims ``(time,)`` (NAO, ENSO, MO),
+      - 1-D seasonal encodings ``sin_m``, ``cos_m``,
+      - 2-D spatial encodings ``(lat, lon)``.
+
+    Each feature is broadcast to the template's full ``(time, lat, lon)`` shape
+    before stacking — 1-D climate indices are tiled across the spatial axes
+    (the index value is identical for every Morocco cell at a given month),
+    spatial encodings are tiled across the time axis.
+
     Returns
     -------
     X        : ``(n_samples, n_features)`` ndarray
@@ -36,10 +47,24 @@ def _stack_xy(
     template : ``DataArray`` of shape ``(time, lat, lon)`` used for reshaping
                predictions back to the input grid.
     """
-    template = (
-        dataset["target"] if "target" in dataset.data_vars else dataset[feature_names[0]]
-    )
-    X = np.stack([dataset[c].values for c in feature_names], axis=-1)
+    # The template must be a 3-D DataArray so we have an authoritative shape
+    # to broadcast against. Prefer the target; fall back to the first feature
+    # that has the full (time, lat, lon) dims.
+    if "target" in dataset.data_vars:
+        template = dataset["target"]
+    else:
+        full_dims = ("time", "lat", "lon")
+        candidates = [n for n in feature_names if set(full_dims).issubset(dataset[n].dims)]
+        if not candidates:
+            raise ValueError(
+                "_stack_xy needs at least one feature with full (time, lat, lon) dims "
+                "to define the template; got only lower-dimensional features."
+            )
+        template = dataset[candidates[0]]
+
+    arrays = [dataset[c].broadcast_like(template).transpose(*template.dims).values
+              for c in feature_names]
+    X = np.stack(arrays, axis=-1)
     X_flat = X.reshape(-1, X.shape[-1])
     y_flat = dataset["target"].values.ravel() if "target" in dataset.data_vars else None
     return X_flat, y_flat, template
