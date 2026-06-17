@@ -1,24 +1,27 @@
-# Smoke experiment — wiring validation + per-model timing across all 3 leads
-# before the full sweep. Output is sufficient to develop Phase 11 notebooks.
+# Smoke experiment — wiring validation for the Optuna backend.
 #
-# Runs every model family at all three leads (L=1, 3, 6) across all 5 folds.
-# - Baselines: climatology, persistence, AR(p)
-# - Linear with shrunk HP grids: ridge, lasso, elasticnet
-# - Trees with 1-combo grids: rf, xgboost  (just to time their per-fit cost)
+# Compared with the prior `test_` smoke:
+#   - RF n_estimators trimmed to [200, 500] (removed 1000 → cheaper per trial)
+#   - RF/XGBoost switched from grid to Optuna (TPE), n_trials=5 each
+#   - Linear models stay on grid with the same shrunk spaces (already cheap)
 #
-# Output filenames are prefixed with "test_" so a smoke run does not overwrite
-# the full sweep's outputs. After this completes, inspect:
-#   results/predictions/test_pooled_allLeads.nc  (lead dim of length 3)
-#   results/metrics/test_metrics_allLeads.csv    (climatology MSSS-vs-clim ≈ 0)
-#   results/logs/test_fold_runs.csv              (120 rows = 5 folds × 3 leads × 8 models)
-#   results/logs/test_feature_status.csv
+# IMPORTANT: n_trials=5 is for SMOKE only — it confirms the Optuna dispatch
+# wires correctly and the full pipeline completes end-to-end in tens of
+# minutes. For the production full sweep, bump n_trials to ~40 in
+# exp_default.yaml (which will take ~5-6 hours by extrapolation).
 #
-# Expected wall time on a laptop: ~3× the single-lead smoke (linear in #leads).
-# Use the per-fit timings logged in real time to extrapolate the full sweep.
+# Output filenames are prefixed with "testOptuna_" so this run does not
+# overwrite the prior `test_` smoke and the two can be compared directly.
+#
+# What to compare after the run:
+#   results/predictions/testOptuna_pooled_allLeads.nc
+#   results/metrics/testOptuna_metrics_allLeads.csv
+#   results/logs/testOptuna_fold_runs.csv             (120 rows = 5 folds × 3 leads × 8 models)
+#   results/logs/testOptuna_feature_status.csv
 
-name: smoke
+name: smoke_optuna
 
-file_prefix: "test_"
+file_prefix: "testOptuna_"
 
 leads: [1, 3, 6]
 
@@ -34,30 +37,44 @@ models:
   - rf
   - xgboost
 
-# Shrunk HP grids — keep the wiring exercised but each search small.
-# Trees use 1 combo so the wall time reflects a single fit (the full grid
-# multiplies this cost by 108 / 144).
+# Search backend per model. Models not listed default to "grid".
+# Optuna is recommended for tree models where the grid is large; for linear
+# models the grid is already small (3-6 combos), so grid is fine.
+search_backends:
+  rf: optuna
+  xgboost: optuna
+
+# Optuna budget per (fold × lead) for each model. SMOKE value — keep small.
+# For the production full sweep, set both to 40 in exp_default.yaml.
+optuna_n_trials:
+  rf: 5
+  xgboost: 5
+
+# Search spaces. For RF/XGBoost (Optuna backend), these define the categorical
+# distributions Optuna samples from. For linear (grid backend), these are the
+# exhaustive combinations.
 hp_grids:
   ridge:
-    alpha: [0.01, 1.0, 100.0]            # 3 combos (vs 13 in full)
+    alpha: [0.01, 1.0, 100.0]                       # 3 combos (grid)
   lasso:
-    alpha: [0.001, 0.01, 0.1, 1.0]       # 4 combos (vs 13 in full)
+    alpha: [0.001, 0.01, 0.1, 1.0]                  # 4 combos (grid)
   elasticnet:
-    alpha: [0.001, 0.01, 0.1]            # 3
-    l1_ratio: [0.3, 0.7]                  # 2  → 6 combos (vs 35 in full)
+    alpha: [0.001, 0.01, 0.1]                       # 3
+    l1_ratio: [0.3, 0.7]                             # 2  → 6 combos (grid)
   rf:
-    n_estimators: [200]                   # 1
-    max_depth: [10]                       # 1
-    min_samples_leaf: [5]                 # 1
-    max_features: ["sqrt"]                # 1   → 1 combo (vs 108 in full)
+    n_estimators: [200, 500]                         # TRIMMED (was [200, 500, 1000])
+    max_depth: [null, 5, 10, 20]
+    min_samples_leaf: [1, 5, 20]
+    max_features: ["sqrt", 0.5, 1.0]
+    # Categorical Optuna space size = 2·4·3·3 = 72; n_trials=5 → wiring only (production: 40)
   xgboost:
-    max_depth: [6]                        # 1
-    learning_rate: [0.1]                  # 1
-    subsample: [1.0]                      # 1
-    colsample_bytree: [1.0]               # 1
-    reg_lambda: [1.0]                     # 1
-    min_child_weight: [1]                 # 1   → 1 combo (vs 144 in full);
-                                          #      n_estimators still set by early stopping
+    max_depth: [4, 6, 8]
+    learning_rate: [0.05, 0.1]
+    subsample: [0.7, 1.0]
+    colsample_bytree: [0.7, 1.0]
+    reg_lambda: [0.1, 1.0, 10.0]
+    min_child_weight: [1, 5]
+    # Categorical Optuna space size = 3·2·2·2·3·2 = 144; n_trials=5 → wiring only (production: 40)
 
 output:
   predictions_dir: results/predictions

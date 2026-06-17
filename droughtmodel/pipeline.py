@@ -48,7 +48,7 @@ from droughtmodel import evaluation as deval
 from droughtmodel import features as dfeat
 from droughtmodel.cv import compute_quarantine_max_lag
 from droughtmodel.models.registry import get_model
-from droughtmodel.tuning import tune_and_refit
+from droughtmodel.tuning import grid_search, optuna_search, tune_and_refit
 from droughtmodel.utils import PROJECT_ROOT
 
 
@@ -59,6 +59,25 @@ _XGB_LIKE = {"xgboost"}
 # Tolerance below which a Lasso/ElasticNet coefficient is treated as zero
 # (feature dropped). For standardized inputs, true L1 zeros are exact.
 _ZERO_TOL = 1e-10
+
+# Default Optuna n_trials when search_backends[name] == "optuna" but no
+# per-model override is given in exp_config["optuna_n_trials"].
+_DEFAULT_OPTUNA_N_TRIALS = 40
+
+
+def _make_optuna_categorical_space(grid: dict[str, Any]):
+    """Convert a `hp_grids[model]` dict of lists into an Optuna search-space callable.
+
+    Each parameter becomes a ``trial.suggest_categorical(name, values)`` so the
+    same YAML definition drives both backends — the SEARCH SPACE is identical;
+    only the search strategy (exhaustive grid vs TPE sampling) differs.
+    """
+    items = list(grid.items())
+
+    def space(trial):
+        return {k: trial.suggest_categorical(k, list(v)) for k, v in items}
+
+    return space
 
 
 # ---------------------------------------------------------------------------
@@ -301,16 +320,42 @@ class ExperimentRunner:
                 fixed.pop(k, None)
 
             is_xgb = name in _XGB_LIKE
-            final_model, search_result = tune_and_refit(
-                model_class=get_model_class(name),
-                grid=hp_grid,
-                train=prep.train,
-                val=prep.val,
-                refit_dataset=prep.refit,
-                fixed_params=fixed,
-                pass_val_to_fit=is_xgb,
-                refit_with_best_iteration=is_xgb,
-            )
+            search_backend = self.exp.get("search_backends", {}).get(name, "grid")
+
+            if search_backend == "optuna":
+                n_trials = (self.exp.get("optuna_n_trials") or {}).get(
+                    name, _DEFAULT_OPTUNA_N_TRIALS
+                )
+                space = _make_optuna_categorical_space(hp_grid)
+                final_model, search_result = tune_and_refit(
+                    model_class=get_model_class(name),
+                    grid={},                       # ignored by optuna backend
+                    train=prep.train,
+                    val=prep.val,
+                    refit_dataset=prep.refit,
+                    fixed_params=fixed,
+                    pass_val_to_fit=is_xgb,
+                    refit_with_best_iteration=is_xgb,
+                    search_fn=optuna_search,
+                    search_kwargs={
+                        "search_space": space,
+                        "n_trials": int(n_trials),
+                        "sampler_seed": 42,
+                    },
+                )
+            else:
+                final_model, search_result = tune_and_refit(
+                    model_class=get_model_class(name),
+                    grid=hp_grid,
+                    train=prep.train,
+                    val=prep.val,
+                    refit_dataset=prep.refit,
+                    fixed_params=fixed,
+                    pass_val_to_fit=is_xgb,
+                    refit_with_best_iteration=is_xgb,
+                    search_fn=grid_search,
+                )
+
             best_params = dict(search_result.best_params)
             best_score = float(search_result.best_score)
             n_trials = int(search_result.n_trials)

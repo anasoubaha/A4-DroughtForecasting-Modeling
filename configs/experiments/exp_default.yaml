@@ -2,6 +2,14 @@
 # Runs all baselines + linear + tree models across 5 folds × 3 leads.
 # Climatology and persistence are always included even if absent from `models`
 # (they're required as references for the MSSS skill scores).
+#
+# Search backends:
+#   - Linear models use grid_search (small spaces, exhaustive is cheap).
+#   - RF / XGBoost use Optuna (TPE) with n_trials=40 per (fold, lead). With
+#     108 / 144 grid combos otherwise, Optuna cuts ~2.7×/3.6× of tree cost.
+# RF n_estimators trimmed to [200, 500] (dropping 1000 saves ~40% per-trial
+# cost with no meaningful gain in best-HP quality on Morocco-scale data).
+# Combined Optuna + trim drops the expected wall time from ~60-80h to ~15h.
 
 name: default
 
@@ -24,7 +32,21 @@ models:
   - rf
   - xgboost
 
+# Search backend per model. Models not listed default to "grid".
+search_backends:
+  rf: optuna
+  xgboost: optuna
+
+# Optuna budget per (fold × lead) for each model. Only consulted when
+# search_backends[model] == "optuna"; ignored for grid-backed models.
+optuna_n_trials:
+  rf: 40
+  xgboost: 40
+
 # HP grids per model — v3 §8 search spaces.
+# For grid-backed models these are the exhaustive combinations.
+# For Optuna-backed models (rf, xgboost) these define the categorical
+# distributions Optuna samples from.
 # Models without an entry here are fit directly on the contiguous refit slice
 # with the defaults from configs/models/<name>.yaml (no tuning).
 hp_grids:
@@ -38,10 +60,11 @@ hp_grids:
     # ↑ logspace(-3, 3, 7)
     l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
   rf:
-    n_estimators: [200, 500, 1000]
+    n_estimators: [200, 500]                # TRIMMED (was [200, 500, 1000])
     max_depth: [null, 5, 10, 20]
     min_samples_leaf: [1, 5, 20]
     max_features: ["sqrt", 0.5, 1.0]
+    # Optuna categorical space size = 2·4·3·3 = 72; n_trials=40 → 1.8× under-sampling
   xgboost:
     max_depth: [4, 6, 8]
     learning_rate: [0.05, 0.1]
@@ -49,6 +72,7 @@ hp_grids:
     colsample_bytree: [0.7, 1.0]
     reg_lambda: [0.1, 1.0, 10.0]
     min_child_weight: [1, 5]
+    # Optuna categorical space size = 3·2·2·2·3·2 = 144; n_trials=40 → 3.6× under-sampling
 
 # Output paths (relative to project root unless absolute).
 output:
