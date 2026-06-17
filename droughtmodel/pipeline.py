@@ -377,28 +377,63 @@ class ExperimentRunner:
             return yaml.safe_load(f) or {}
 
     # -----------------------------------------------------------------------
-    # Save helpers
+    # Save helpers — single combined-across-leads files
     # -----------------------------------------------------------------------
-    def _save_predictions(
-        self, preds: dict[str, np.ndarray], truth: np.ndarray, time_arr: np.ndarray, lead: int,
+    def _save_predictions_all_leads(
+        self,
+        preds_per_lead: dict[int, dict[str, np.ndarray]],
+        truth_per_lead: dict[int, np.ndarray],
+        time_per_lead: dict[int, np.ndarray],
     ) -> None:
+        """Write ONE NetCDF combining all leads as a `lead` dimension.
+
+        Each pred / truth array becomes ``(lead, time, lat, lon)``. The time
+        coord is identical across leads (the stitched 2000-01 → 2024-12 OOS
+        window depends only on the fold layout, not on the lead).
+        """
+        leads = sorted(preds_per_lead.keys())
         lat = self._template["lat"].values
         lon = self._template["lon"].values
-        time_coord = pd.DatetimeIndex(time_arr)
-        ds = xr.Dataset(
-            {f"pred_{name}": (("time", "lat", "lon"), arr) for name, arr in preds.items()}
-            | {"truth": (("time", "lat", "lon"), truth)},
-            coords={"time": time_coord, "lat": lat, "lon": lon},
-            attrs={"lead": lead, "experiment": self.exp.get("name", "default")},
-        )
-        out = self.preds_dir / f"{self.file_prefix}pooled_lead{lead}.nc"
-        ds.to_netcdf(out)
-        self._log(f"  wrote predictions → {out.relative_to(PROJECT_ROOT)}")
 
-    def _save_metrics_for_lead(
+        ref_time = time_per_lead[leads[0]]
+        for L in leads[1:]:
+            if not np.array_equal(time_per_lead[L], ref_time):
+                raise ValueError(
+                    f"Time coord mismatch between leads {leads[0]} and {L}; cannot stack."
+                )
+        time_coord = pd.DatetimeIndex(ref_time)
+
+        model_names = list(preds_per_lead[leads[0]].keys())
+        data_vars: dict[str, tuple] = {
+            f"pred_{name}": (
+                ("lead", "time", "lat", "lon"),
+                np.stack([preds_per_lead[L][name] for L in leads], axis=0),
+            )
+            for name in model_names
+        }
+        data_vars["truth"] = (
+            ("lead", "time", "lat", "lon"),
+            np.stack([truth_per_lead[L] for L in leads], axis=0),
+        )
+
+        ds = xr.Dataset(
+            data_vars,
+            coords={"lead": leads, "time": time_coord, "lat": lat, "lon": lon},
+            attrs={"experiment": self.exp.get("name", "default")},
+        )
+        out = self.preds_dir / f"{self.file_prefix}pooled_allLeads.nc"
+        ds.to_netcdf(out)
+        self._log(f"wrote predictions → {out.relative_to(PROJECT_ROOT)}  "
+                  f"({len(leads)} leads × {len(time_coord)} months)")
+
+    def _compute_metrics_for_lead(
         self, preds: dict[str, np.ndarray], truth: np.ndarray, time_arr: np.ndarray, lead: int,
     ) -> pd.DataFrame:
-        """Evaluate every model in `preds` (winter pool + all-months) and write a CSV."""
+        """Evaluate every model in `preds` (winter pool + all-months) for one lead.
+
+        Returns the tidy DataFrame without writing anything. The caller is
+        responsible for concatenating across leads and writing once.
+        """
         clim = preds.get("climatology")
         pers = preds.get("persistence")
         if clim is None or pers is None:
@@ -414,7 +449,6 @@ class ExperimentRunner:
              self.metrics_cfg["bootstrap"]["mean_block_length_all"]),
         ]:
             reporter = deval.MetricsReporter.from_config(self.metrics_cfg, evaluation_window=window_name)
-            # Override block length to match the window
             reporter.mean_block_length = block
 
             y_true = truth[mask]
@@ -428,12 +462,15 @@ class ExperimentRunner:
                     res, model=name, lead=lead, fold="pooled", evaluation_window=window_name,
                 )
                 rows.append(df)
+        return pd.concat(rows, ignore_index=True)
 
-        metrics_df = pd.concat(rows, ignore_index=True)
-        out = self.metrics_dir / f"{self.file_prefix}metrics_lead{lead}.csv"
-        metrics_df.to_csv(out, index=False)
-        self._log(f"  wrote metrics → {out.relative_to(PROJECT_ROOT)}")
-        return metrics_df
+    def _save_metrics_all_leads(self, dfs_per_lead: list[pd.DataFrame]) -> pd.DataFrame:
+        """Concat per-lead metrics DataFrames and write one combined CSV."""
+        combined = pd.concat(dfs_per_lead, ignore_index=True)
+        out = self.metrics_dir / f"{self.file_prefix}metrics_allLeads.csv"
+        combined.to_csv(out, index=False)
+        self._log(f"wrote metrics → {out.relative_to(PROJECT_ROOT)}  ({len(combined)} rows)")
+        return combined
 
     def _save_logs(self) -> None:
         if self._fold_runs:
@@ -473,7 +510,11 @@ class ExperimentRunner:
             if required not in models_to_run:
                 models_to_run.insert(0, required)
 
-        metrics_by_lead: dict[int, pd.DataFrame] = {}
+        # Accumulators across all leads — written once at the end as combined files.
+        preds_per_lead: dict[int, dict[str, np.ndarray]] = {}
+        truth_per_lead: dict[int, np.ndarray] = {}
+        time_per_lead: dict[int, np.ndarray] = {}
+        metrics_dfs: list[pd.DataFrame] = []
 
         # Progress counters — used by _fit_predict for ETA computation.
         self._total_fits = len(self.exp["leads"]) * len(self._cv.fold_specs) * len(models_to_run)
@@ -504,19 +545,22 @@ class ExperimentRunner:
                 time_pool.append(prep.time_test)
                 self._log(f"  fold {fold_spec.index} done in {time.time() - fold_t0:.1f}s")
 
-            # Stitch per-lead pools.
-            truth_arr = np.concatenate(truth_pool, axis=0)
-            time_arr = np.concatenate(time_pool, axis=0)
-            preds_arr = {n: np.concatenate(p, axis=0) for n, p in pooled_preds.items()}
-
-            self._save_predictions(preds_arr, truth_arr, time_arr, lead)
-            metrics_by_lead[lead] = self._save_metrics_for_lead(preds_arr, truth_arr, time_arr, lead)
+            # Stitch per-lead pools, accumulate for the combined save at the end.
+            preds_per_lead[lead] = {n: np.concatenate(p, axis=0) for n, p in pooled_preds.items()}
+            truth_per_lead[lead] = np.concatenate(truth_pool, axis=0)
+            time_per_lead[lead] = np.concatenate(time_pool, axis=0)
+            metrics_dfs.append(self._compute_metrics_for_lead(
+                preds_per_lead[lead], truth_per_lead[lead], time_per_lead[lead], lead,
+            ))
             self._log(f"--- lead L={lead} done in {time.time() - lead_t0:.1f}s ---")
 
+        # Combined writes (one predictions NetCDF + one metrics CSV across all leads).
+        self._save_predictions_all_leads(preds_per_lead, truth_per_lead, time_per_lead)
+        combined_metrics = self._save_metrics_all_leads(metrics_dfs)
         self._save_logs()
         self._log(f"\n=== done in {time.time() - t0:.1f}s "
                   f"({self._fits_done}/{self._total_fits} fits completed) ===")
-        return metrics_by_lead
+        return combined_metrics
 
 
 # ---------------------------------------------------------------------------

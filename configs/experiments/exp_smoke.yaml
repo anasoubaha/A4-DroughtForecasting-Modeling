@@ -1,25 +1,26 @@
-# Smoke experiment — fast wiring validation + per-model timing before the full sweep.
+# Smoke experiment — wiring validation + per-model timing across all 3 leads
+# before the full sweep. Output is sufficient to develop Phase 11 notebooks.
 #
-# Runs every model family at a single lead (L=3) across all 5 folds.
+# Runs every model family at all three leads (L=1, 3, 6) across all 5 folds.
 # - Baselines: climatology, persistence, AR(p)
 # - Linear with shrunk HP grids: ridge, lasso, elasticnet
 # - Trees with 1-combo grids: rf, xgboost  (just to time their per-fit cost)
 #
 # Output filenames are prefixed with "test_" so a smoke run does not overwrite
 # the full sweep's outputs. After this completes, inspect:
-#   results/predictions/test_pooled_lead3.nc
-#   results/metrics/test_metrics_lead3.csv      (climatology MSSS-vs-clim ≈ 0)
-#   results/logs/test_fold_runs.csv             (40 rows = 5 folds × 8 models)
+#   results/predictions/test_pooled_allLeads.nc  (lead dim of length 3)
+#   results/metrics/test_metrics_allLeads.csv    (climatology MSSS-vs-clim ≈ 0)
+#   results/logs/test_fold_runs.csv              (120 rows = 5 folds × 3 leads × 8 models)
 #   results/logs/test_feature_status.csv
 #
-# Expected wall time on a laptop: ~5-15 minutes (RF + XGBoost dominate).
+# Expected wall time on a laptop: ~3× the single-lead smoke (linear in #leads).
 # Use the per-fit timings logged in real time to extrapolate the full sweep.
 
 name: smoke
 
 file_prefix: "test_"
 
-leads: [3]
+leads: [1, 3, 6]
 
 modeling_unit: global
 

@@ -20,7 +20,7 @@ env/
 
 # Project — derived/processed data and outputs
 data/
-#results/predictions/
+results/predictions/
 #results/figures/
 #results/logs/
 
