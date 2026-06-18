@@ -378,21 +378,22 @@ for fold in cv_folds:
     preds = final_model.predict(X_test)
 ```
 
-**Search method**:
+**Search method** (per model, configured via `exp.search_backends` in the experiment YAML):
 
-- **Grid search is the primary method for all models** (Ridge, Lasso, Elastic Net, RF, XGBoost) — reproducible, transparent, and acceptable in cost given the reduced XGBoost grid below.
-- **Bayesian (Optuna)** is available as an **optional** alternative for RF and XGBoost (selectable via the experiment YAML), to be used if/when the grid becomes a bottleneck.
+- **Linear models** (Ridge, Lasso, Elastic Net) — **grid search**. Their spaces are small (13–35 combos) and exhaustive enumeration is reproducible and cheap.
+- **Tree models** (RF, XGBoost) — **Optuna TPE** with `n_trials=40` per (fold, lead). The categorical search spaces are 72 and 144 respectively; sampling at `n_trials=40` cuts tree wall time by ~3× compared with exhaustive grid while landing on near-best HPs (TPE focuses sampling on high-skill regions after a brief uniform-exploration phase). Grid is still available for either backend by setting `search_backends.{rf,xgboost}: grid`.
+- **RF `n_estimators` trimmed to `{200, 500}`** (dropping 1000): the n=1000 configs dominate per-trial cost without meaningful gain in best-HP quality on Morocco-scale data (5 folds × ~80k pooled samples per fit). The trim cuts RF's average per-trial cost ~30–40 %; combined with Optuna's `n_trials=40` budget, this reduces total tree wall time from ~60–80 h (full grid) to ~9 h on a typical laptop.
 
-**Search spaces (grid)**:
+**Search spaces**:
 
-| Model | Space | Combinations |
-| --- | --- | --- |
-| Ridge / Lasso | `alpha ∈ logspace(−3, 3, 13)` | 13 |
-| Elastic Net | `alpha ∈ logspace(−3, 3, 7); l1_ratio ∈ {0.1, 0.3, 0.5, 0.7, 0.9}` | 35 |
-| RF | `n_estimators ∈ {200, 500, 1000}; max_depth ∈ {None, 5, 10, 20}; min_samples_leaf ∈ {1, 5, 20}; max_features ∈ {sqrt, 0.5, 1.0}` | 108 |
-| XGBoost (reduced grid) | `max_depth ∈ {4, 6, 8}; lr ∈ {0.05, 0.1}; subsample ∈ {0.7, 1.0}; colsample_bytree ∈ {0.7, 1.0}; reg_lambda ∈ {0.1, 1.0, 10.0}; min_child_weight ∈ {1, 5}`; `n_estimators` via early stopping on val | 144 |
+| Model | Space | Backend | Sampled |
+| --- | --- | --- | --- |
+| Ridge / Lasso | `alpha ∈ logspace(−3, 3, 13)` | grid | all 13 |
+| Elastic Net | `alpha ∈ logspace(−3, 3, 7); l1_ratio ∈ {0.1, 0.3, 0.5, 0.7, 0.9}` | grid | all 35 |
+| RF | `n_estimators ∈ {200, 500}; max_depth ∈ {None, 5, 10, 20}; min_samples_leaf ∈ {1, 5, 20}; max_features ∈ {sqrt, 0.5, 1.0}` | **Optuna TPE** | 40 of 72 |
+| XGBoost | `max_depth ∈ {4, 6, 8}; lr ∈ {0.05, 0.1}; subsample ∈ {0.7, 1.0}; colsample_bytree ∈ {0.7, 1.0}; reg_lambda ∈ {0.1, 1.0, 10.0}; min_child_weight ∈ {1, 5}`; `n_estimators` via early stopping on val | **Optuna TPE** | 40 of 144 |
 
-The XGBoost space is intentionally compact (144 combos vs. 6,075 in the full v2 draft) so that full grid search remains tractable across 5 folds × 3 leads. Optuna can explore the full space if needed.
+The Optuna search space is supplied to the runner as the same `hp_grids` dict used for grid search; the `_make_optuna_categorical_space` helper in `droughtmodel.pipeline` converts each list of values to a `trial.suggest_categorical` call, so a single YAML drives both backends.
 
 ## 9. Forecast Generation
 
@@ -429,7 +430,7 @@ The six deterministic metrics in §10.1 form the headline set. They are reported
 ### 10.4 Reporting Structure
 
 - Per lead time (L = 1, 3, 6).
-- Per CV fold (supplementary table) + pooled across folds (headline).
+- Pooled across folds (headline). Per-fold supplementary table is a planned addition — currently the pipeline emits one `fold='pooled'` row per (model, lead, metric, evaluation_window).
 - Spatial: per-cell skill maps + pooled metrics across cells.
 - **Winter-only** evaluation (t ∈ Nov–Feb) is the **headline** unit; **all-months** evaluation is reported as a supplementary diagnostic alongside (uses 4× more samples, lets us check whether skill is winter-specific or season-uniform).
 - **Block bootstrap 95 % CIs** on all headline metrics:
@@ -439,18 +440,31 @@ The six deterministic metrics in §10.1 form the headline set. They are reported
 
 ## 11. Outputs
 
-| Output | Description |
+The pipeline (`ExperimentRunner` in `droughtmodel/pipeline.py`) produces a fixed set of artefacts per experiment. Output filenames are prefixed by `exp.file_prefix` (default `""`) so smoke and production runs can coexist without collision. The paths below assume the default prefix.
+
+**Pipeline artefacts** (written by `scripts/03_run_experiment.py`):
+
+| File | Description |
 | --- | --- |
-| Grid-level forecasts | 0.5° SPEI3 predictions per (model, lead) |
-| Spatial skill maps | Per-cell ACC, MSSS for each (model, lead) |
-| Forecast-vs-truth time series | At selected cells (Tangier, Imilchil, Agadir) |
-| Feature importance diagnostics | Permutation (RF), SHAP (XGBoost), per lead |
-| Skill comparison tables | Models × leads × headline metrics, with bootstrap CIs (winter-only headline; all-months supplementary) |
-| Per-fold stability tables | Same metrics broken by fold |
-| Winter-vs-all-months skill diagnostic | Table comparing each model's metrics on winter targets vs all-month targets, per lead |
-| Baseline-vs-ML skill plots | Bars showing MSSS for each model relative to each baseline |
-| Lag selection diagnostics | PACF / CCF plots per variable per fold |
-| Stationarity diagnostics | Mann-Kendall and KS test results per cell |
+| `results/predictions/pooled_allLeads.nc` | NetCDF with one variable per model (`pred_{name}`) plus `truth`, all of shape `(lead, time, lat, lon)`; the `time` axis is the continuous 2000–2024 OOS stitch shared across leads |
+| `results/metrics/metrics_allLeads.csv` | Pooled headline metrics with block-bootstrap CIs; one row per (model, lead, metric, evaluation_window); `fold='pooled'` (see §10.4) |
+| `results/logs/fold_runs.csv` | One row per (fold, lead, model): best HP, best val score, search duration, fit duration, `K_eff`, `boundary_gap`, `n_trials`, `n_features_total`, `n_features_retained` |
+| `results/logs/feature_status.csv` | One row per (fold, lead, model, feature): `importance`, `retained` (bool), `kind` (`coef` / `gini` / `gain`) |
+
+**Phase 11 presentation-layer artefacts** (built by the results notebooks under `notebooks/`):
+
+| Output | Notebook | Description |
+| --- | --- | --- |
+| Headline skill tables (CSV + LaTeX) | `09_paper_figures.ipynb` | Pooled metrics with CIs + significance markers, ready for direct paper inclusion |
+| Per-cell ACC and MSSS maps | `07_spatial_skill_maps.ipynb` | Model × lead grids; latitudinal skill profile by quartile band |
+| Difference maps (ML − baseline) | `07`, `09` | Where each ML model adds value over the strongest baseline |
+| L1 retention heatmaps | `08_feature_importance.ipynb` | ElasticNet / Lasso retention across folds per (lead, feature) |
+| Top-feature bar charts | `08`, `09` | Built-in tree importance (Gini / gain) — see §11 note below on permutation / SHAP |
+| Lift-over-best-baseline table | `06_results_tabular_ml.ipynb` | Per-(model, lead, metric) lift over the strongest baseline |
+| Lag-selection diagnostics | `02_feature_engineering_diagnostics.ipynb` | PACF / CCF plots per variable per fold |
+| Stationarity diagnostics | `01_eda.ipynb` | Mann-Kendall and KS-test results per cell |
+
+**Note on feature importance.** The current `feature_status.csv` carries the **built-in** importance for each model — standardized coefficients for linear, Gini for RF, gain for XGBoost. Built-in tree importances under-credit correlated features (see §6 notes). Production-quality permutation importance (RF) and TreeSHAP (XGBoost) require the fitted model object, which the pipeline does not currently persist. The helpers exist in `droughtmodel/selection.py`; adding model serialization + a post-hoc importance pass is a planned polish.
 
 ## Summary of Experimental Structure (v3)
 
@@ -474,7 +488,7 @@ The six deterministic metrics in §10.1 form the headline set. They are reported
 | ML models | OLS / Ridge / Lasso / Elastic Net, RF, XGBoost |
 | DL models | LSTM, CNN, CNN-LSTM (or ConvLSTM) — deferred |
 | HP tuning | Protocol A — tune on val, refit on train + val, eval on test |
-| HP search | Grid search primary for all models (Ridge/Lasso/EN: 13–35 combos; RF: 108; XGBoost reduced grid: 144). Optuna optional for RF / XGBoost |
+| HP search | Linear models: grid (Ridge/Lasso 13, ElasticNet 35). RF: Optuna TPE, `n_trials=40` over a 72-combo categorical space (`n_estimators` trimmed to {200, 500}). XGBoost: Optuna TPE, `n_trials=40` over a 144-combo categorical space; `n_estimators` via early stopping on val |
 | Headline metrics (all deterministic) | MAE, RMSE, Pearson *r*, ACC, MSSS-vs-clim, MSSS-vs-persistence |
 | Optional metric | HSS at SPEI3 < −1.0 (available in code, not in v1 paper headline) |
 | Evaluation window | Winter-only (Nov–Feb) headline; all-months supplementary diagnostic |
