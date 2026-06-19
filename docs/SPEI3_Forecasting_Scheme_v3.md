@@ -378,10 +378,8 @@ for fold in cv_folds:
     preds = final_model.predict(X_test)
 ```
 
-**Search method** (per model, configured via `exp.search_backends` in the experiment YAML):
-
 - **Linear models** (Ridge, Lasso, Elastic Net) — **grid search**. Their spaces are small (13–35 combos) and exhaustive enumeration is reproducible and cheap.
-- **Tree models** (RF, XGBoost) — **Optuna TPE** with `n_trials=40` per (fold, lead). The categorical search spaces are 72 and 144 respectively; sampling at `n_trials=40` cuts tree wall time by ~3× compared with exhaustive grid while landing on near-best HPs (TPE focuses sampling on high-skill regions after a brief uniform-exploration phase). Grid is still available for either backend by setting `search_backends.{rf,xgboost}: grid`.
+- **Tree models** (RF, XGBoost) — **Optuna TPE** with `n_trials=40` per (fold, lead). The categorical search spaces are 72 and 144 respectively; sampling at `n_trials=40` cuts tree wall time by ~3× compared with exhaustive grid while landing on near-best HPs (TPE focuses sampling on high-skill regions after a brief uniform-exploration phase). Grid is still available for either backend.
 - **RF `n_estimators` trimmed to `{200, 500}`** (dropping 1000): the n=1000 configs dominate per-trial cost without meaningful gain in best-HP quality on Morocco-scale data (5 folds × ~80k pooled samples per fit). The trim cuts RF's average per-trial cost ~30–40 %; combined with Optuna's `n_trials=40` budget, this reduces total tree wall time from ~60–80 h (full grid) to ~9 h on a typical laptop.
 
 **Search spaces**:
@@ -393,7 +391,6 @@ for fold in cv_folds:
 | RF | `n_estimators ∈ {200, 500}; max_depth ∈ {None, 5, 10, 20}; min_samples_leaf ∈ {1, 5, 20}; max_features ∈ {sqrt, 0.5, 1.0}` | **Optuna TPE** | 40 of 72 |
 | XGBoost | `max_depth ∈ {4, 6, 8}; lr ∈ {0.05, 0.1}; subsample ∈ {0.7, 1.0}; colsample_bytree ∈ {0.7, 1.0}; reg_lambda ∈ {0.1, 1.0, 10.0}; min_child_weight ∈ {1, 5}`; `n_estimators` via early stopping on val | **Optuna TPE** | 40 of 144 |
 
-The Optuna search space is supplied to the runner as the same `hp_grids` dict used for grid search; the `_make_optuna_categorical_space` helper in `droughtmodel.pipeline` converts each list of values to a `trial.suggest_categorical` call, so a single YAML drives both backends.
 
 ## 9. Forecast Generation
 
@@ -401,7 +398,7 @@ For each issue month *t*:
 
 1. Extract predictors up to month *t*.
 2. Apply trained model for lead *L* (one model per (family, fold, lead)).
-3. Produce forecast SPEI3̂(t + L).
+3. Produce forecast SPEI3(t + L).
 4. Retain forecasts verifying in Nov–Feb only.
 
 ## 10. Evaluation Metrics

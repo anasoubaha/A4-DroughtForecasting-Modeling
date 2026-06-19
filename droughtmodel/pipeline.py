@@ -202,11 +202,17 @@ class ExperimentRunner:
         self.preds_dir = self._resolve(out.get("predictions_dir", "results/predictions"))
         self.metrics_dir = self._resolve(out.get("metrics_dir", "results/metrics"))
         self.logs_dir = self._resolve(out.get("logs_dir", "results/logs"))
+        self.models_dir = self._resolve(out.get("models_dir", "results/models"))
         # Optional prefix prepended to every output filename — lets smoke and
         # full-sweep runs coexist in the same directories without collision.
         self.file_prefix: str = str(self.exp.get("file_prefix", "") or "")
+        # Opt-in: pickle each fitted model so post-hoc importance (permutation,
+        # SHAP) can run later without refitting. Adds ~1-3 GB to a full sweep.
+        self.save_models: bool = bool(self.exp.get("save_models", False))
         for d in (self.preds_dir, self.metrics_dir, self.logs_dir):
             d.mkdir(parents=True, exist_ok=True)
+        if self.save_models:
+            self.models_dir.mkdir(parents=True, exist_ok=True)
 
         # State filled in by .run()
         self._datasets: dict[str, xr.Dataset] | None = None
@@ -232,6 +238,35 @@ class ExperimentRunner:
     # -----------------------------------------------------------------------
     # Per-fold preparation
     # -----------------------------------------------------------------------
+    def setup_data(self) -> None:
+        """Eagerly load datasets + Morocco mask + CV object.
+
+        Normally called from inside `run()`. External scripts (e.g.
+        `scripts/05_compute_posthoc_importance.py`) call it directly to use
+        `_prepare_fold` without running the full pipeline.
+        """
+        if self._datasets is not None:
+            return
+        self._datasets = ddata.load_all(self.data_cfg)
+        self._template = dfeat.gather_predictor("spei3", self._datasets)
+        self._morocco_mask = dfeat.load_region_mask(
+            self.feat_cfg["region_mask"]["path"], self._template,
+            name=self.feat_cfg["region_mask"]["name"],
+        )
+        self._cv = dcv.RollingOriginCV.from_config(self.cv_cfg)
+
+    @property
+    def cv(self) -> dcv.RollingOriginCV:
+        """The configured RollingOriginCV (after ``setup_data()``)."""
+        if self._cv is None:
+            raise RuntimeError("ExperimentRunner.setup_data() must be called first.")
+        return self._cv
+
+    def prepare_fold(self, lead: int, fold_spec: dcv.FoldSpec) -> _PreparedFold:
+        """Public wrapper around `_prepare_fold` that ensures data is loaded."""
+        self.setup_data()
+        return self._prepare_fold(lead, fold_spec)
+
     def _prepare_fold(self, lead: int, fold_spec: dcv.FoldSpec) -> _PreparedFold:
         """All per-fold prep through §6.1 step 6 (standardized slices ready to fit)."""
         # 2. Lag selection on planned train (pre-quarantine).
@@ -372,6 +407,19 @@ class ExperimentRunner:
 
         fit_duration = time.time() - t_fit_start
 
+        # Optional model serialization for downstream post-hoc importance
+        # (permutation, SHAP). Only trees actually benefit — but we save all
+        # models for consistency if opted in. Joblib + compress=3 trims size.
+        if self.save_models:
+            try:
+                import joblib
+                model_path = self.models_dir / (
+                    f"{self.file_prefix}{name}_lead{prep.lead}_fold{prep.fold_index}.joblib"
+                )
+                joblib.dump(final_model, model_path, compress=3)
+            except Exception as e:
+                self._log(f"    [warn] could not save {name} model: {e}")
+
         # Predict on test (NaN-safe via TabularBaseModel.predict).
         pred = final_model.predict(prep.test).values
 
@@ -471,13 +519,19 @@ class ExperimentRunner:
         self._log(f"wrote predictions → {out.relative_to(PROJECT_ROOT)}  "
                   f"({len(leads)} leads × {len(time_coord)} months)")
 
-    def _compute_metrics_for_lead(
-        self, preds: dict[str, np.ndarray], truth: np.ndarray, time_arr: np.ndarray, lead: int,
+    def _evaluate_slice(
+        self,
+        preds: dict[str, np.ndarray],
+        truth: np.ndarray,
+        time_arr: np.ndarray,
+        lead: int,
+        fold_label,
     ) -> pd.DataFrame:
-        """Evaluate every model in `preds` (winter pool + all-months) for one lead.
+        """Evaluate every model on ONE (preds, truth, time) slice and return tidy rows.
 
-        Returns the tidy DataFrame without writing anything. The caller is
-        responsible for concatenating across leads and writing once.
+        Computes winter-only + all-months with block-bootstrap CIs. The ``fold_label``
+        is written into the ``fold`` column verbatim — pass ``'pooled'`` for the
+        across-folds slice or the fold index (int) for a single-fold slice.
         """
         clim = preds.get("climatology")
         pers = preds.get("persistence")
@@ -493,6 +547,10 @@ class ExperimentRunner:
             ("all_months", np.ones_like(months, dtype=bool),
              self.metrics_cfg["bootstrap"]["mean_block_length_all"]),
         ]:
+            # If a slice has no rows for this window (e.g. a single fold's winter
+            # subset might be empty under unusual configs), skip gracefully.
+            if not mask.any():
+                continue
             reporter = deval.MetricsReporter.from_config(self.metrics_cfg, evaluation_window=window_name)
             reporter.mean_block_length = block
 
@@ -504,10 +562,44 @@ class ExperimentRunner:
                 y_pred = arr[mask]
                 res = reporter.evaluate(y_pred, y_true, climatology=y_clim, persistence=y_pers)
                 df = deval.MetricsReporter.to_dataframe(
-                    res, model=name, lead=lead, fold="pooled", evaluation_window=window_name,
+                    res, model=name, lead=lead, fold=fold_label, evaluation_window=window_name,
                 )
                 rows.append(df)
-        return pd.concat(rows, ignore_index=True)
+        return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
+
+    def _compute_metrics_for_lead(
+        self,
+        preds_per_fold: dict[str, list[np.ndarray]],
+        truth_per_fold: list[np.ndarray],
+        time_per_fold: list[np.ndarray],
+        lead: int,
+    ) -> pd.DataFrame:
+        """Compute headline metrics on the pooled slice AND each individual fold.
+
+        The pooled rows (``fold='pooled'``) are the paper headline. The per-fold
+        rows (``fold=1, 2, …``) enable stability diagnostics — see notebook 06
+        and the related stability bar chart.
+
+        Returns the concatenated tidy DataFrame; caller is responsible for the
+        across-leads concatenation and final CSV write.
+        """
+        n_folds = len(truth_per_fold)
+        all_rows: list[pd.DataFrame] = []
+
+        # Pooled slice — concatenate the per-fold lists along the time axis.
+        pooled_preds = {n: np.concatenate(arrs, axis=0) for n, arrs in preds_per_fold.items()}
+        pooled_truth = np.concatenate(truth_per_fold, axis=0)
+        pooled_time = np.concatenate(time_per_fold, axis=0)
+        all_rows.append(self._evaluate_slice(pooled_preds, pooled_truth, pooled_time, lead, "pooled"))
+
+        # Per-fold slices.
+        for i in range(n_folds):
+            fold_preds = {n: arrs[i] for n, arrs in preds_per_fold.items()}
+            all_rows.append(self._evaluate_slice(
+                fold_preds, truth_per_fold[i], time_per_fold[i], lead, i + 1,
+            ))
+
+        return pd.concat([df for df in all_rows if not df.empty], ignore_index=True)
 
     def _save_metrics_all_leads(self, dfs_per_lead: list[pd.DataFrame]) -> pd.DataFrame:
         """Concat per-lead metrics DataFrames and write one combined CSV."""
@@ -532,19 +624,14 @@ class ExperimentRunner:
     # -----------------------------------------------------------------------
     # run()
     # -----------------------------------------------------------------------
-    def run(self) -> dict[int, pd.DataFrame]:
-        """Execute the full experiment. Returns ``{lead: metrics_df}``."""
+    def run(self) -> pd.DataFrame:
+        """Execute the full experiment. Returns the combined metrics DataFrame
+        (pooled + per-fold rows across all leads)."""
         t0 = time.time()
         self._log(f"=== ExperimentRunner: '{self.exp.get('name', 'default')}' ===")
 
         # Load data once
-        self._datasets = ddata.load_all(self.data_cfg)
-        self._template = dfeat.gather_predictor("spei3", self._datasets)
-        self._morocco_mask = dfeat.load_region_mask(
-            self.feat_cfg["region_mask"]["path"], self._template,
-            name=self.feat_cfg["region_mask"]["name"],
-        )
-        self._cv = dcv.RollingOriginCV.from_config(self.cv_cfg)
+        self.setup_data()
         self._log(f"loaded data ({self._template.sizes}) + Morocco mask "
                   f"({int(self._morocco_mask.sum())} cells)")
 
@@ -590,13 +677,14 @@ class ExperimentRunner:
                 time_pool.append(prep.time_test)
                 self._log(f"  fold {fold_spec.index} done in {time.time() - fold_t0:.1f}s")
 
-            # Stitch per-lead pools, accumulate for the combined save at the end.
+            # Compute pooled + per-fold metrics from the per-fold lists.
+            metrics_dfs.append(self._compute_metrics_for_lead(
+                pooled_preds, truth_pool, time_pool, lead,
+            ))
+            # Stitch the per-lead pools (used by _save_predictions_all_leads below).
             preds_per_lead[lead] = {n: np.concatenate(p, axis=0) for n, p in pooled_preds.items()}
             truth_per_lead[lead] = np.concatenate(truth_pool, axis=0)
             time_per_lead[lead] = np.concatenate(time_pool, axis=0)
-            metrics_dfs.append(self._compute_metrics_for_lead(
-                preds_per_lead[lead], truth_per_lead[lead], time_per_lead[lead], lead,
-            ))
             self._log(f"--- lead L={lead} done in {time.time() - lead_t0:.1f}s ---")
 
         # Combined writes (one predictions NetCDF + one metrics CSV across all leads).
