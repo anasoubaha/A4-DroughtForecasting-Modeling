@@ -1,0 +1,85 @@
+# Winter-only training experiment (v4).
+#
+# Identical to exp_default.yaml in every dimension EXCEPT:
+#   * `winter_only_training: true` — drops rows whose lead-shifted target
+#     falls outside Nov-Feb from the train / val / refit slices. Test
+#     slice is left unfiltered so the all-months diagnostic still reports
+#     the (expected-to-be-degraded) off-season skill.
+#   * `output.*_dir` paths point to `results/winter-training/...` so this
+#     run's artefacts live in a separate folder and do not overwrite the
+#     default sweep's outputs.
+#
+# Methodology motivation: by training only on rows whose target falls in
+# the evaluation season (Nov-Feb), the model concentrates its capacity on
+# the relationships that matter for the headline evaluation. Seasonal
+# encoding features (sin_month, cos_month) lose their large between-season
+# variance and the trees no longer "waste" splits separating summer from
+# winter — they dedicate full depth to the subtle teleconnection signals
+# that drive winter SPEI3.
+#
+# Training sample size drops by ~66 % (12 months/year → 4 months/year).
+# Still tens of thousands of pooled rows per fold across 164 Morocco cells.
+
+name: winter-training
+
+file_prefix: ""
+
+leads: [1, 3, 6]
+
+modeling_unit: global
+
+# v4 switch: filter train/val/refit to Nov-Feb target months only.
+winter_only_training: true
+
+# Persist fitted models for fast-path post-hoc importance later
+# (avoids the refit step in scripts/05_compute_posthoc_importance.py).
+save_models: true
+
+models:
+  - climatology
+  - persistence
+  - ar
+  - ols
+  - ridge
+  - lasso
+  - elasticnet
+  - rf
+  - xgboost
+
+# Same search backends and budgets as the default sweep.
+search_backends:
+  rf: optuna
+  xgboost: optuna
+
+optuna_n_trials:
+  rf: 40
+  xgboost: 40
+
+hp_grids:
+  ridge:
+    alpha: [1.0e-3, 3.16e-3, 1.0e-2, 3.16e-2, 1.0e-1, 3.16e-1, 1.0, 3.16, 10.0, 31.6, 100.0, 316.0, 1000.0]
+  lasso:
+    alpha: [1.0e-3, 3.16e-3, 1.0e-2, 3.16e-2, 1.0e-1, 3.16e-1, 1.0, 3.16, 10.0, 31.6, 100.0, 316.0, 1000.0]
+  elasticnet:
+    alpha: [1.0e-3, 1.0e-2, 1.0e-1, 1.0, 10.0, 100.0, 1000.0]
+    l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
+  rf:
+    n_estimators: [200, 500]
+    max_depth: [null, 5, 10, 20]
+    min_samples_leaf: [1, 5, 20]
+    max_features: ["sqrt", 0.5, 1.0]
+  xgboost:
+    max_depth: [4, 6, 8]
+    learning_rate: [0.05, 0.1]
+    subsample: [0.7, 1.0]
+    colsample_bytree: [0.7, 1.0]
+    reg_lambda: [0.1, 1.0, 10.0]
+    min_child_weight: [1, 5]
+
+# Output paths under a dedicated subfolder so the winter-training results
+# never overwrite the default sweep's artefacts.
+output:
+  predictions_dir: results/winter-training/predictions
+  metrics_dir:     results/winter-training/metrics
+  logs_dir:        results/winter-training/logs
+  models_dir:      results/winter-training/models

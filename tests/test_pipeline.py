@@ -180,6 +180,59 @@ def test_fold_run_log_dataclass_fields():
     assert json.loads(log.best_params) == {"alpha": 1.0}
 
 
+def test_winter_target_mask_picks_correct_months():
+    """At lead=3, target_month = (feature_time + 3 months).month. The mask
+    must be True iff the target_month is in {11, 12, 1, 2}."""
+    import xarray as xr
+    from droughtmodel.pipeline import _winter_target_mask, _filter_to_winter_targets
+
+    times = pd.date_range("2000-01", periods=36, freq="MS")
+    ds = xr.Dataset(
+        {"target": (("time",), np.arange(36, dtype=float))},
+        coords={"time": times},
+        attrs={"lead": 3},
+    )
+    mask = _winter_target_mask(ds)
+    target_months = (pd.DatetimeIndex(ds["time"].values) + pd.DateOffset(months=3)).month
+    expected = np.isin(target_months, [11, 12, 1, 2])
+    assert np.array_equal(mask, expected)
+
+    filtered = _filter_to_winter_targets(ds)
+    assert filtered.sizes["time"] == 12   # 4 winter months × 3 years
+    filtered_target_months = (
+        pd.DatetimeIndex(filtered["time"].values) + pd.DateOffset(months=3)
+    ).month
+    assert set(filtered_target_months) <= {11, 12, 1, 2}
+
+
+def test_winter_only_training_flag_default_false_and_loads_from_yaml(tmp_path):
+    """`winter_only_training` defaults to False, can be overridden via experiment YAML."""
+    import yaml
+    cfg = _min_exp_config(tmp_path)
+    r1 = ExperimentRunner(cfg, verbose=False)
+    assert r1.winter_only_training is False
+
+    cfg["winter_only_training"] = True
+    cfg_path = tmp_path / "exp.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg))
+    r2 = ExperimentRunner(cfg_path, verbose=False)
+    assert r2.winter_only_training is True
+
+
+def test_winter_training_experiment_yaml_loads():
+    """The shipped winter-training experiment YAML must load cleanly."""
+    from droughtmodel.utils import PROJECT_ROOT
+    cfg_path = PROJECT_ROOT / "configs" / "experiments" / "exp_winter-training.yaml"
+    assert cfg_path.exists()
+    import yaml
+    cfg = yaml.safe_load(cfg_path.read_text())
+    assert cfg["name"] == "winter-training"
+    assert cfg["winter_only_training"] is True
+    # Output paths should be under results/winter-training/
+    for key in ("predictions_dir", "metrics_dir", "logs_dir", "models_dir"):
+        assert "winter-training" in cfg["output"][key]
+
+
 def test_default_experiment_yaml_loads():
     """The shipped default experiment YAML must load cleanly."""
     from droughtmodel.utils import PROJECT_ROOT

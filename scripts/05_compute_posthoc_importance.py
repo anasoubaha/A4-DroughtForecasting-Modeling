@@ -113,8 +113,10 @@ def main() -> int:
     runner = ExperimentRunner(args.exp_config, verbose=False)
     runner.setup_data()
 
-    fold_runs_path = RESULTS_DIR / "logs" / f"{prefix}fold_runs.csv"
-    feat_status_path = RESULTS_DIR / "logs" / f"{prefix}feature_status.csv"
+    # Resolve log paths from the runner (so it follows the experiment YAML's
+    # `output.logs_dir` — needed e.g. for winter-training → results/winter-training/logs/).
+    fold_runs_path = runner.logs_dir / f"{prefix}fold_runs.csv"
+    feat_status_path = runner.logs_dir / f"{prefix}feature_status.csv"
     for p in (fold_runs_path, feat_status_path):
         if not p.exists():
             print(f"ERROR: missing {p}", file=sys.stderr)

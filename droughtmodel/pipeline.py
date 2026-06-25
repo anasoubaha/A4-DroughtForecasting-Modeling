@@ -56,6 +56,14 @@ from droughtmodel.utils import PROJECT_ROOT
 # should refit with best_iteration locked from the search.
 _XGB_LIKE = {"xgboost"}
 
+# Reference baselines. They always train on the UNFILTERED training data
+# even when `winter_only_training` is on — climatology/persistence/AR are
+# reference points and must remain comparable between v3 and v4 runs.
+# Specifically: a winter-only climatology baseline has no values for off-
+# season target months, breaking the all-months evaluation and producing
+# unfair MSSS comparisons.
+_BASELINE_MODELS = {"climatology", "persistence", "ar"}
+
 # Tolerance below which a Lasso/ElasticNet coefficient is treated as zero
 # (feature dropped). For standardized inputs, true L1 zeros are exact.
 _ZERO_TOL = 1e-10
@@ -136,6 +144,34 @@ def _importance_kind(model) -> str:
     return "none"
 
 
+def _winter_target_mask(ds: xr.Dataset) -> np.ndarray:
+    """Boolean mask over ``ds.time`` selecting rows whose target SPEI3(t + L)
+    falls in the headline evaluation season (Nov–Feb).
+
+    The dataset's lead is read from ``ds.attrs['lead']`` (populated by
+    `dfeat.build_dataset`). The "target month" at feature time *t* is
+    ``(t + lead months).month``.
+    """
+    lead = int(ds.attrs.get("lead", 0))
+    feature_times = pd.DatetimeIndex(ds["time"].values)
+    target_times = feature_times + pd.DateOffset(months=lead)
+    return np.isin(target_times.month, [11, 12, 1, 2])
+
+
+def _filter_to_winter_targets(ds: xr.Dataset) -> xr.Dataset:
+    """Drop rows whose lead-shifted target month falls outside Nov–Feb.
+
+    Used for the "winter expert" specialisation (v4): the model trains only
+    on rows whose target lies in the evaluation season, dropping the ~66 % of
+    samples whose targets are in Mar–Oct. The test slice is intentionally NOT
+    passed through this filter — we keep all-month predictions on the test
+    window so the all-months diagnostic can show the model's seasonal
+    specialisation as expected behaviour.
+    """
+    mask = _winter_target_mask(ds)
+    return ds.isel(time=np.where(mask)[0])
+
+
 def _feature_status_rows(model, fold: int, lead: int, name: str) -> list[FeatureStatusLog]:
     fi = model.feature_importance() if hasattr(model, "feature_importance") else None
     if not fi:
@@ -167,10 +203,19 @@ class _PreparedFold:
     selected_lags: dict[str, list[int]]
     K_eff: int
     boundary_gap: int
+    # Slices used by ML models. In v4 (`winter_only_training: true`) these are
+    # winter-filtered (target month ∈ Nov-Feb). In v3 they are identical to the
+    # `*_full` slices below.
     train: xr.Dataset
     val: xr.Dataset
     test: xr.Dataset
     refit: xr.Dataset
+    # Always-unfiltered slices. Used by baselines (climatology, persistence,
+    # AR) so the reference forecasts are computed from the full 12-month
+    # training data regardless of v3 / v4. In v3 these equal `train/val/refit`.
+    train_full: xr.Dataset
+    val_full: xr.Dataset
+    refit_full: xr.Dataset
     time_test: np.ndarray
     target_test: np.ndarray
 
@@ -209,6 +254,11 @@ class ExperimentRunner:
         # Opt-in: pickle each fitted model so post-hoc importance (permutation,
         # SHAP) can run later without refitting. Adds ~1-3 GB to a full sweep.
         self.save_models: bool = bool(self.exp.get("save_models", False))
+        # Opt-in: filter train / val / refit slices to rows whose lead-shifted
+        # target falls in Nov-Feb only ("winter expert" specialisation, v4).
+        # Test slice stays unfiltered so the all-months diagnostic can show
+        # the specialisation cost on off-season targets.
+        self.winter_only_training: bool = bool(self.exp.get("winter_only_training", False))
         for d in (self.preds_dir, self.metrics_dir, self.logs_dir):
             d.mkdir(parents=True, exist_ok=True)
         if self.save_models:
@@ -305,8 +355,8 @@ class ExperimentRunner:
             include_spatial=self.feat_cfg["include_spatial_encoding"],
         )
 
-        train = ds_feat.isel(time=fi.train_idx)
-        val = ds_feat.isel(time=fi.val_idx)
+        train_full = ds_feat.isel(time=fi.train_idx)
+        val_full = ds_feat.isel(time=fi.val_idx)
         test = ds_feat.isel(time=fi.test_idx)
 
         # Contiguous refit slice [train_start, test_start − gap − 1]
@@ -314,14 +364,41 @@ class ExperimentRunner:
         # last refit index = test_start_index − gap − 1 (inclusive).
         refit_start = int(fi.train_idx[0])
         refit_stop = int(fi.test_idx[0]) - fi.boundary_gap   # exclusive (Python slice)
-        refit = ds_feat.isel(time=slice(refit_start, refit_stop))
+        refit_full = ds_feat.isel(time=slice(refit_start, refit_stop))
 
-        # 6. Standardize: fit on train_idx, apply to all four slices.
+        # 5b. Winter-only training filter (v4): drop rows whose lead-shifted
+        # target month falls outside Nov-Feb. The filter applies to the slices
+        # consumed by ML models (`train`, `val`, `refit`). Baselines use the
+        # unfiltered `*_full` slices regardless of v4 — see _fit_predict.
+        # Test is never filtered (so the all-months diagnostic can quantify
+        # the specialisation cost on off-season targets).
+        if self.winter_only_training:
+            train = _filter_to_winter_targets(train_full)
+            val = _filter_to_winter_targets(val_full)
+            refit = _filter_to_winter_targets(refit_full)
+            self._log(
+                f"    winter-only training filter (ML models only):  "
+                f"train {train_full.sizes['time']} -> {train.sizes['time']},  "
+                f"val {val_full.sizes['time']} -> {val.sizes['time']},  "
+                f"refit {refit_full.sizes['time']} -> {refit.sizes['time']}"
+            )
+        else:
+            train, val, refit = train_full, val_full, refit_full
+
+        # 6. Standardize: fit on (winter-filtered, if applicable) train,
+        # apply to all unfiltered and filtered slices. The fitted (μ, σ)
+        # reflect winter conditions in v4 but are applied to off-season
+        # months too so all-month predictions remain mathematically defined.
         std = dcv.FoldStandardizer.from_config(self.cv_cfg, region_mask=self._morocco_mask).fit(train)
         train_n = std.transform(train).where(self._morocco_mask)
         val_n = std.transform(val).where(self._morocco_mask)
         test_n = std.transform(test).where(self._morocco_mask)
         refit_n = std.transform(refit).where(self._morocco_mask)
+        # In v3 these are aliases of the above; in v4 they preserve the full
+        # 12-month-per-year version for baselines.
+        train_full_n = std.transform(train_full).where(self._morocco_mask)
+        val_full_n = std.transform(val_full).where(self._morocco_mask)
+        refit_full_n = std.transform(refit_full).where(self._morocco_mask)
 
         return _PreparedFold(
             fold_index=fi.index,
@@ -333,6 +410,9 @@ class ExperimentRunner:
             val=val_n,
             test=test_n,
             refit=refit_n,
+            train_full=train_full_n,
+            val_full=val_full_n,
+            refit_full=refit_full_n,
             time_test=test_n["time"].values,
             target_test=test_n["target"].values,
         )
@@ -345,6 +425,19 @@ class ExperimentRunner:
         hp_grid = self.exp.get("hp_grids", {}).get(name)
         model_defaults = self._load_model_defaults(name)
         fixed = {**(model_defaults.get("params") or {})}
+
+        # Baselines (climatology, persistence, AR) always train on the
+        # UNFILTERED full slices, even when winter_only_training is on, so
+        # they remain consistent v3/v4 references. ML models use the
+        # (possibly winter-filtered) `train` / `val` / `refit` slices.
+        if name in _BASELINE_MODELS:
+            train_slice = prep.train_full
+            val_slice = prep.val_full
+            refit_slice = prep.refit_full
+        else:
+            train_slice = prep.train
+            val_slice = prep.val
+            refit_slice = prep.refit
 
         t_fit_start = time.time()
 
@@ -365,9 +458,9 @@ class ExperimentRunner:
                 final_model, search_result = tune_and_refit(
                     model_class=get_model_class(name),
                     grid={},                       # ignored by optuna backend
-                    train=prep.train,
-                    val=prep.val,
-                    refit_dataset=prep.refit,
+                    train=train_slice,
+                    val=val_slice,
+                    refit_dataset=refit_slice,
                     fixed_params=fixed,
                     pass_val_to_fit=is_xgb,
                     refit_with_best_iteration=is_xgb,
@@ -382,9 +475,9 @@ class ExperimentRunner:
                 final_model, search_result = tune_and_refit(
                     model_class=get_model_class(name),
                     grid=hp_grid,
-                    train=prep.train,
-                    val=prep.val,
-                    refit_dataset=prep.refit,
+                    train=train_slice,
+                    val=val_slice,
+                    refit_dataset=refit_slice,
                     fixed_params=fixed,
                     pass_val_to_fit=is_xgb,
                     refit_with_best_iteration=is_xgb,
@@ -398,7 +491,7 @@ class ExperimentRunner:
             best_iter = getattr(search_result.best_model, "best_iteration", None)
         else:
             # No HP tuning — direct fit on the contiguous refit slice.
-            final_model = get_model(name, **fixed).fit(prep.refit)
+            final_model = get_model(name, **fixed).fit(refit_slice)
             best_params = dict(fixed)
             best_score = None
             n_trials = 0

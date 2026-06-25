@@ -1,0 +1,285 @@
+=== ExperimentRunner: 'winter-training' ===
+loaded data (Frozen({'time': 900, 'lat': 64, 'lon': 64})) + Morocco mask (164 cells)
+will perform 135 fits (3 leads × 5 folds × 9 models)
+
+--- lead L = 1 ---
+  fold 1 …
+    winter-only training filter (ML models only):  train 497 -> 165,  val 89 -> 29,  refit 593 -> 197
+    K_eff=4, gap=7, n_train=165, n_val=29, n_test=60, n_refit=197
+    [  1/135    0.7%] L=1 fold1 climatology  fit=  0.02s  | elapsed=   2.2s  ETA= 299.9s
+    [  2/135    1.5%] L=1 fold1 persistence  fit=  0.00s  | elapsed=   2.2s  ETA= 148.9s
+    [  3/135    2.2%] L=1 fold1 ar           fit=  0.06s, retained=3/3  | elapsed=   2.3s  ETA= 101.5s
+    [  4/135    3.0%] L=1 fold1 ols          fit=  0.76s, retained=57/57  | elapsed=   3.3s  ETA= 107.4s
+    [  5/135    3.7%] L=1 fold1 ridge        fit=  9.12s, trials=13, retained=57/57  | elapsed=  12.7s  ETA= 329.1s
+    [  6/135    4.4%] L=1 fold1 lasso        fit= 11.73s, trials=13, retained=11/57  | elapsed=  24.6s  ETA= 528.3s
+    [  7/135    5.2%] L=1 fold1 elasticnet   fit= 28.49s, trials=35, retained=21/57  | elapsed=  53.2s  ETA= 972.5s
+    [  8/135    5.9%] L=1 fold1 rf           fit=626.66s, trials=40, retained=57/57  | elapsed= 682.6s  ETA=10836.3s
+    [  9/135    6.7%] L=1 fold1 xgboost      fit= 43.11s, trials=40, retained=57/57, best_iter=81  | elapsed= 725.8s  ETA=10161.7s
+  fold 1 done in 725.8s
+  fold 2 …
+    winter-only training filter (ML models only):  train 557 -> 185,  val 89 -> 29,  refit 653 -> 217
+    K_eff=4, gap=7, n_train=185, n_val=29, n_test=60, n_refit=217
+    [ 10/135    7.4%] L=1 fold2 climatology  fit=  0.01s  | elapsed= 728.1s  ETA=9101.0s
+    [ 11/135    8.1%] L=1 fold2 persistence  fit=  0.00s  | elapsed= 728.1s  ETA=8207.4s
+    [ 12/135    8.9%] L=1 fold2 ar           fit=  0.05s, retained=3/3  | elapsed= 728.1s  ETA=7463.3s
+    [ 13/135    9.6%] L=1 fold2 ols          fit=  0.39s, retained=59/59  | elapsed= 728.6s  ETA=6837.9s
+    [ 14/135   10.4%] L=1 fold2 ridge        fit=  4.89s, trials=13, retained=59/59  | elapsed= 733.6s  ETA=6340.6s
+    [ 15/135   11.1%] L=1 fold2 lasso        fit=  9.03s, trials=13, retained=9/59  | elapsed= 742.8s  ETA=5942.1s
+    [ 16/135   11.9%] L=1 fold2 elasticnet   fit= 41.48s, trials=35, retained=8/59  | elapsed= 784.4s  ETA=5833.6s
+    [ 17/135   12.6%] L=1 fold2 rf           fit=258.98s, trials=40, retained=59/59  | elapsed=1044.5s  ETA=7250.0s
+    [ 18/135   13.3%] L=1 fold2 xgboost      fit= 39.34s, trials=40, retained=59/59, best_iter=35  | elapsed=1084.0s  ETA=7045.8s
+  fold 2 done in 358.1s
+  fold 3 …
+    winter-only training filter (ML models only):  train 617 -> 205,  val 89 -> 29,  refit 713 -> 237
+    K_eff=4, gap=7, n_train=205, n_val=29, n_test=60, n_refit=237
+    [ 19/135   14.1%] L=1 fold3 climatology  fit=  0.01s  | elapsed=1086.4s  ETA=6632.7s
+    [ 20/135   14.8%] L=1 fold3 persistence  fit=  0.00s  | elapsed=1086.4s  ETA=6246.7s
+    [ 21/135   15.6%] L=1 fold3 ar           fit=  0.05s, retained=3/3  | elapsed=1086.4s  ETA=5897.8s
+    [ 22/135   16.3%] L=1 fold3 ols          fit=  0.42s, retained=61/61  | elapsed=1087.0s  ETA=5583.0s
+    [ 23/135   17.0%] L=1 fold3 ridge        fit=  5.23s, trials=13, retained=61/61  | elapsed=1092.3s  ETA=5319.0s
+    [ 24/135   17.8%] L=1 fold3 lasso        fit=  9.57s, trials=13, retained=37/61  | elapsed=1102.0s  ETA=5096.7s
+    [ 25/135   18.5%] L=1 fold3 elasticnet   fit= 33.82s, trials=35, retained=38/61  | elapsed=1135.9s  ETA=4998.0s
+    [ 26/135   19.3%] L=1 fold3 rf           fit=722.32s, trials=40, retained=61/61  | elapsed=1870.0s  ETA=7839.5s
+    [ 27/135   20.0%] L=1 fold3 xgboost      fit= 46.70s, trials=40, retained=61/61, best_iter=60  | elapsed=1917.0s  ETA=7668.1s
+  fold 3 done in 833.1s
+  fold 4 …
+    winter-only training filter (ML models only):  train 677 -> 225,  val 89 -> 29,  refit 773 -> 257
+    K_eff=4, gap=7, n_train=225, n_val=29, n_test=60, n_refit=257
+    [ 28/135   20.7%] L=1 fold4 climatology  fit=  0.01s  | elapsed=1920.3s  ETA=7338.1s
+    [ 29/135   21.5%] L=1 fold4 persistence  fit=  0.00s  | elapsed=1920.3s  ETA=7018.9s
+    [ 30/135   22.2%] L=1 fold4 ar           fit=  0.06s, retained=3/3  | elapsed=1920.3s  ETA=6721.1s
+    [ 31/135   23.0%] L=1 fold4 ols          fit=  0.45s, retained=60/60  | elapsed=1920.9s  ETA=6444.3s
+    [ 32/135   23.7%] L=1 fold4 ridge        fit=  5.65s, trials=13, retained=60/60  | elapsed=1926.6s  ETA=6201.4s
+    [ 33/135   24.4%] L=1 fold4 lasso        fit= 10.21s, trials=13, retained=32/60  | elapsed=1937.0s  ETA=5986.9s
+    [ 34/135   25.2%] L=1 fold4 elasticnet   fit= 38.43s, trials=35, retained=31/60  | elapsed=1975.5s  ETA=5868.4s
+    [ 35/135   25.9%] L=1 fold4 rf           fit=787.25s, trials=40, retained=60/60  | elapsed=2764.0s  ETA=7897.1s
+    [ 36/135   26.7%] L=1 fold4 xgboost      fit= 86.19s, trials=40, retained=60/60, best_iter=275  | elapsed=2850.4s  ETA=7838.5s
+  fold 4 done in 933.3s
+  fold 5 …
+    winter-only training filter (ML models only):  train 732 -> 244,  val 84 -> 28,  refit 828 -> 276
+    K_eff=9, gap=12, n_train=244, n_val=28, n_test=60, n_refit=276
+    [ 37/135   27.4%] L=1 fold5 climatology  fit=  0.01s  | elapsed=2853.3s  ETA=7557.4s
+    [ 38/135   28.1%] L=1 fold5 persistence  fit=  0.00s  | elapsed=2853.3s  ETA=7283.4s
+    [ 39/135   28.9%] L=1 fold5 ar           fit=  0.06s, retained=3/3  | elapsed=2853.4s  ETA=7023.7s
+    [ 40/135   29.6%] L=1 fold5 ols          fit=  0.49s, retained=61/61  | elapsed=2854.0s  ETA=6778.2s
+    [ 41/135   30.4%] L=1 fold5 ridge        fit=  5.98s, trials=13, retained=61/61  | elapsed=2860.1s  ETA=6557.2s
+    [ 42/135   31.1%] L=1 fold5 lasso        fit=  8.04s, trials=13, retained=36/61  | elapsed=2868.2s  ETA=6351.0s
+    [ 43/135   31.9%] L=1 fold5 elasticnet   fit= 29.48s, trials=35, retained=32/61  | elapsed=2897.8s  ETA=6199.9s
+    [ 44/135   32.6%] L=1 fold5 rf           fit=934.27s, trials=40, retained=61/61  | elapsed=3833.4s  ETA=7928.1s
+    [ 45/135   33.3%] L=1 fold5 xgboost      fit= 72.07s, trials=40, retained=61/61, best_iter=160  | elapsed=3905.6s  ETA=7811.2s
+  fold 5 done in 1055.3s
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+--- lead L=1 done in 4217.6s ---
+
+--- lead L = 3 ---
+  fold 1 …
+    winter-only training filter (ML models only):  train 495 -> 164,  val 87 -> 28,  refit 591 -> 196
+    K_eff=4, gap=9, n_train=164, n_val=28, n_test=60, n_refit=196
+    [ 46/135   34.1%] L=3 fold1 climatology  fit=  0.01s  | elapsed=4219.2s  ETA=8163.2s
+    [ 47/135   34.8%] L=3 fold1 persistence  fit=  0.00s  | elapsed=4219.2s  ETA=7899.8s
+    [ 48/135   35.6%] L=3 fold1 ar           fit=  0.04s, retained=3/3  | elapsed=4219.2s  ETA=7647.4s
+    [ 49/135   36.3%] L=3 fold1 ols          fit=  0.32s, retained=57/57  | elapsed=4219.7s  ETA=7405.9s
+    [ 50/135   37.0%] L=3 fold1 ridge        fit=  4.10s, trials=13, retained=57/57  | elapsed=4223.9s  ETA=7180.6s
+    [ 51/135   37.8%] L=3 fold1 lasso        fit=  8.30s, trials=13, retained=0/57  | elapsed=4232.3s  ETA=6970.8s
+    [ 52/135   38.5%] L=3 fold1 elasticnet   fit= 30.83s, trials=35, retained=2/57  | elapsed=4263.2s  ETA=6804.7s
+    [ 53/135   39.3%] L=3 fold1 rf           fit=305.08s, trials=40, retained=57/57  | elapsed=4569.2s  ETA=7069.3s
+    [ 54/135   40.0%] L=3 fold1 xgboost      fit= 31.04s, trials=40, retained=57/57, best_iter=1  | elapsed=4600.4s  ETA=6900.6s
+  fold 1 done in 382.8s
+  fold 2 …
+    winter-only training filter (ML models only):  train 555 -> 184,  val 87 -> 28,  refit 651 -> 216
+    K_eff=4, gap=9, n_train=184, n_val=28, n_test=60, n_refit=216
+    [ 55/135   40.7%] L=3 fold2 climatology  fit=  0.01s  | elapsed=4602.3s  ETA=6694.2s
+    [ 56/135   41.5%] L=3 fold2 persistence  fit=  0.00s  | elapsed=4602.3s  ETA=6492.5s
+    [ 57/135   42.2%] L=3 fold2 ar           fit=  0.05s, retained=3/3  | elapsed=4602.3s  ETA=6297.9s
+    [ 58/135   43.0%] L=3 fold2 ols          fit=  0.37s, retained=59/59  | elapsed=4602.8s  ETA=6110.6s
+    [ 59/135   43.7%] L=3 fold2 ridge        fit=  4.63s, trials=13, retained=59/59  | elapsed=4607.5s  ETA=5935.1s
+    [ 60/135   44.4%] L=3 fold2 lasso        fit= 16.62s, trials=13, retained=21/59  | elapsed=4624.3s  ETA=5780.3s
+    [ 61/135   45.2%] L=3 fold2 elasticnet   fit= 53.24s, trials=35, retained=32/59  | elapsed=4677.6s  ETA=5674.5s
+    [ 62/135   45.9%] L=3 fold2 rf           fit=304.93s, trials=40, retained=59/59  | elapsed=4982.8s  ETA=5866.8s
+    [ 63/135   46.7%] L=3 fold2 xgboost      fit= 30.44s, trials=40, retained=59/59, best_iter=6  | elapsed=5013.4s  ETA=5729.5s
+  fold 2 done in 413.0s
+  fold 3 …
+    winter-only training filter (ML models only):  train 615 -> 204,  val 87 -> 28,  refit 711 -> 236
+    K_eff=4, gap=9, n_train=204, n_val=28, n_test=60, n_refit=236
+    [ 64/135   47.4%] L=3 fold3 climatology  fit=  0.01s  | elapsed=5015.6s  ETA=5564.2s
+    [ 65/135   48.1%] L=3 fold3 persistence  fit=  0.00s  | elapsed=5015.6s  ETA=5401.4s
+    [ 66/135   48.9%] L=3 fold3 ar           fit=  0.05s, retained=3/3  | elapsed=5015.6s  ETA=5243.6s
+    [ 67/135   49.6%] L=3 fold3 ols          fit=  0.42s, retained=61/61  | elapsed=5016.2s  ETA=5091.0s
+    [ 68/135   50.4%] L=3 fold3 ridge        fit=  5.22s, trials=13, retained=61/61  | elapsed=5021.5s  ETA=4947.7s
+    [ 69/135   51.1%] L=3 fold3 lasso        fit= 14.02s, trials=13, retained=0/61  | elapsed=5035.6s  ETA=4816.7s
+    [ 70/135   51.9%] L=3 fold3 elasticnet   fit= 53.47s, trials=35, retained=0/61  | elapsed=5089.2s  ETA=4725.7s
+    [ 71/135   52.6%] L=3 fold3 rf           fit=348.61s, trials=40, retained=61/61  | elapsed=5438.3s  ETA=4902.1s
+    [ 72/135   53.3%] L=3 fold3 xgboost      fit= 34.35s, trials=40, retained=61/61, best_iter=1  | elapsed=5472.7s  ETA=4788.6s
+  fold 3 done in 459.4s
+  fold 4 …
+    winter-only training filter (ML models only):  train 675 -> 224,  val 87 -> 28,  refit 771 -> 256
+    K_eff=4, gap=9, n_train=224, n_val=28, n_test=60, n_refit=256
+    [ 73/135   54.1%] L=3 fold4 climatology  fit=  0.01s  | elapsed=5475.4s  ETA=4650.4s
+    [ 74/135   54.8%] L=3 fold4 persistence  fit=  0.00s  | elapsed=5475.4s  ETA=4513.5s
+    [ 75/135   55.6%] L=3 fold4 ar           fit=  0.06s, retained=3/3  | elapsed=5475.5s  ETA=4380.4s
+    [ 76/135   56.3%] L=3 fold4 ols          fit=  0.45s, retained=60/60  | elapsed=5476.1s  ETA=4251.2s
+    [ 77/135   57.0%] L=3 fold4 ridge        fit=  5.56s, trials=13, retained=60/60  | elapsed=5481.7s  ETA=4129.1s
+    [ 78/135   57.8%] L=3 fold4 lasso        fit= 14.17s, trials=13, retained=0/60  | elapsed=5496.0s  ETA=4016.3s
+    [ 79/135   58.5%] L=3 fold4 elasticnet   fit= 56.03s, trials=35, retained=0/60  | elapsed=5552.1s  ETA=3935.7s
+    [ 80/135   59.3%] L=3 fold4 rf           fit=717.93s, trials=40, retained=60/60  | elapsed=6270.5s  ETA=4311.0s
+    [ 81/135   60.0%] L=3 fold4 xgboost      fit= 34.58s, trials=40, retained=60/60, best_iter=7  | elapsed=6305.2s  ETA=4203.5s
+  fold 4 done in 832.5s
+  fold 5 …
+    winter-only training filter (ML models only):  train 730 -> 243,  val 82 -> 27,  refit 826 -> 275
+    K_eff=9, gap=14, n_train=243, n_val=27, n_test=60, n_refit=275
+    [ 82/135   60.7%] L=3 fold5 climatology  fit=  0.02s  | elapsed=6308.2s  ETA=4077.2s
+    [ 83/135   61.5%] L=3 fold5 persistence  fit=  0.00s  | elapsed=6308.2s  ETA=3952.1s
+    [ 84/135   62.2%] L=3 fold5 ar           fit=  0.06s, retained=3/3  | elapsed=6308.2s  ETA=3830.0s
+    [ 85/135   63.0%] L=3 fold5 ols          fit=  0.48s, retained=61/61  | elapsed=6308.8s  ETA=3711.1s
+    [ 86/135   63.7%] L=3 fold5 ridge        fit=  6.05s, trials=13, retained=61/61  | elapsed=6315.0s  ETA=3598.1s
+    [ 87/135   64.4%] L=3 fold5 lasso        fit= 15.04s, trials=13, retained=0/61  | elapsed=6330.1s  ETA=3492.5s
+    [ 88/135   65.2%] L=3 fold5 elasticnet   fit= 61.02s, trials=35, retained=0/61  | elapsed=6391.3s  ETA=3413.5s
+    [ 89/135   65.9%] L=3 fold5 rf           fit=539.53s, trials=40, retained=61/61  | elapsed=6931.1s  ETA=3582.3s
+    [ 90/135   66.7%] L=3 fold5 xgboost      fit= 36.65s, trials=40, retained=61/61, best_iter=30  | elapsed=6967.8s  ETA=3483.9s
+  fold 5 done in 662.6s
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+--- lead L=3 done in 3075.2s ---
+
+--- lead L = 6 ---
+  fold 1 …
+    winter-only training filter (ML models only):  train 492 -> 164,  val 84 -> 28,  refit 588 -> 196
+    K_eff=4, gap=12, n_train=164, n_val=28, n_test=60, n_refit=196
+    [ 91/135   67.4%] L=6 fold1 climatology  fit=  0.01s  | elapsed=7294.5s  ETA=3527.0s
+    [ 92/135   68.1%] L=6 fold1 persistence  fit=  0.00s  | elapsed=7294.5s  ETA=3409.4s
+    [ 93/135   68.9%] L=6 fold1 ar           fit=  0.04s, retained=3/3  | elapsed=7294.5s  ETA=3294.3s
+    [ 94/135   69.6%] L=6 fold1 ols          fit=  0.33s, retained=57/57  | elapsed=7295.0s  ETA=3181.8s
+    [ 95/135   70.4%] L=6 fold1 ridge        fit=  4.18s, trials=13, retained=57/57  | elapsed=7299.3s  ETA=3073.4s
+    [ 96/135   71.1%] L=6 fold1 lasso        fit=  7.11s, trials=13, retained=0/57  | elapsed=7306.5s  ETA=2968.3s
+    [ 97/135   71.9%] L=6 fold1 elasticnet   fit= 29.90s, trials=35, retained=0/57  | elapsed=7336.5s  ETA=2874.1s
+    [ 98/135   72.6%] L=6 fold1 rf           fit=198.29s, trials=40, retained=57/57  | elapsed=7535.0s  ETA=2844.9s
+    [ 99/135   73.3%] L=6 fold1 xgboost      fit= 40.94s, trials=40, retained=57/57, best_iter=0  | elapsed=7576.2s  ETA=2755.0s
+  fold 1 done in 283.4s
+  fold 2 …
+    winter-only training filter (ML models only):  train 552 -> 184,  val 84 -> 28,  refit 648 -> 216
+    K_eff=4, gap=12, n_train=184, n_val=28, n_test=60, n_refit=216
+    [100/135   74.1%] L=6 fold2 climatology  fit=  0.01s  | elapsed=7578.1s  ETA=2652.3s
+    [101/135   74.8%] L=6 fold2 persistence  fit=  0.00s  | elapsed=7578.1s  ETA=2551.1s
+    [102/135   75.6%] L=6 fold2 ar           fit=  0.05s, retained=3/3  | elapsed=7578.2s  ETA=2451.8s
+    [103/135   76.3%] L=6 fold2 ols          fit=  0.37s, retained=59/59  | elapsed=7578.7s  ETA=2354.5s
+    [104/135   77.0%] L=6 fold2 ridge        fit=  4.57s, trials=13, retained=59/59  | elapsed=7583.3s  ETA=2260.4s
+    [105/135   77.8%] L=6 fold2 lasso        fit=  9.28s, trials=13, retained=0/59  | elapsed=7592.7s  ETA=2169.3s
+    [106/135   78.5%] L=6 fold2 elasticnet   fit= 46.10s, trials=35, retained=0/59  | elapsed=7638.9s  ETA=2089.9s
+    [107/135   79.3%] L=6 fold2 rf           fit=326.65s, trials=40, retained=59/59  | elapsed=7966.0s  ETA=2084.6s
+    [108/135   80.0%] L=6 fold2 xgboost      fit= 32.58s, trials=40, retained=59/59, best_iter=7  | elapsed=7998.7s  ETA=1999.7s
+  fold 2 done in 422.5s
+  fold 3 …
+    winter-only training filter (ML models only):  train 612 -> 204,  val 84 -> 28,  refit 708 -> 236
+    K_eff=4, gap=12, n_train=204, n_val=28, n_test=60, n_refit=236
+    [109/135   80.7%] L=6 fold3 climatology  fit=  0.01s  | elapsed=8001.0s  ETA=1908.5s
+    [110/135   81.5%] L=6 fold3 persistence  fit=  0.00s  | elapsed=8001.0s  ETA=1818.4s
+    [111/135   82.2%] L=6 fold3 ar           fit=  0.05s, retained=3/3  | elapsed=8001.0s  ETA=1730.0s
+    [112/135   83.0%] L=6 fold3 ols          fit=  0.41s, retained=61/61  | elapsed=8001.6s  ETA=1643.2s
+    [113/135   83.7%] L=6 fold3 ridge        fit=  5.08s, trials=13, retained=61/61  | elapsed=8006.7s  ETA=1558.8s
+    [114/135   84.4%] L=6 fold3 lasso        fit= 11.22s, trials=13, retained=0/61  | elapsed=8018.1s  ETA=1477.0s
+    [115/135   85.2%] L=6 fold3 elasticnet   fit= 44.39s, trials=35, retained=0/61  | elapsed=8062.6s  ETA=1402.2s
+    [116/135   85.9%] L=6 fold3 rf           fit=371.72s, trials=40, retained=61/61  | elapsed=8434.8s  ETA=1381.6s
+    [117/135   86.7%] L=6 fold3 xgboost      fit= 42.49s, trials=40, retained=61/61, best_iter=0  | elapsed=8477.5s  ETA=1304.2s
+  fold 3 done in 478.8s
+  fold 4 …
+    winter-only training filter (ML models only):  train 672 -> 224,  val 84 -> 28,  refit 768 -> 256
+    K_eff=4, gap=12, n_train=224, n_val=28, n_test=60, n_refit=256
+    [118/135   87.4%] L=6 fold4 climatology  fit=  0.01s  | elapsed=8480.1s  ETA=1221.7s
+    [119/135   88.1%] L=6 fold4 persistence  fit=  0.00s  | elapsed=8480.1s  ETA=1140.2s
+    [120/135   88.9%] L=6 fold4 ar           fit=  0.05s, retained=3/3  | elapsed=8480.2s  ETA=1060.0s
+    [121/135   89.6%] L=6 fold4 ols          fit=  0.43s, retained=60/60  | elapsed=8480.7s  ETA= 981.2s
+    [122/135   90.4%] L=6 fold4 ridge        fit=  5.48s, trials=13, retained=60/60  | elapsed=8486.3s  ETA= 904.3s
+    [123/135   91.1%] L=6 fold4 lasso        fit=  9.01s, trials=13, retained=0/60  | elapsed=8495.4s  ETA= 828.8s
+    [124/135   91.9%] L=6 fold4 elasticnet   fit= 36.22s, trials=35, retained=0/60  | elapsed=8531.7s  ETA= 756.8s
+    [125/135   92.6%] L=6 fold4 rf           fit=401.72s, trials=40, retained=60/60  | elapsed=8933.9s  ETA= 714.7s
+    [126/135   93.3%] L=6 fold4 xgboost      fit= 45.83s, trials=40, retained=60/60, best_iter=0  | elapsed=8980.2s  ETA= 641.4s
+  fold 4 done in 502.7s
+  fold 5 …
+    winter-only training filter (ML models only):  train 727 -> 243,  val 79 -> 27,  refit 823 -> 275
+    K_eff=9, gap=17, n_train=243, n_val=27, n_test=60, n_refit=275
+    [127/135   94.1%] L=6 fold5 climatology  fit=  0.01s  | elapsed=8983.3s  ETA= 565.9s
+    [128/135   94.8%] L=6 fold5 persistence  fit=  0.00s  | elapsed=8983.3s  ETA= 491.3s
+    [129/135   95.6%] L=6 fold5 ar           fit=  0.06s, retained=3/3  | elapsed=8983.3s  ETA= 417.8s
+    [130/135   96.3%] L=6 fold5 ols          fit=  0.48s, retained=61/61  | elapsed=8983.9s  ETA= 345.5s
+    [131/135   97.0%] L=6 fold5 ridge        fit=  6.04s, trials=13, retained=61/61  | elapsed=8990.1s  ETA= 274.5s
+    [132/135   97.8%] L=6 fold5 lasso        fit=  9.72s, trials=13, retained=0/61  | elapsed=8999.9s  ETA= 204.5s
+    [133/135   98.5%] L=6 fold5 elasticnet   fit= 35.80s, trials=35, retained=0/61  | elapsed=9035.8s  ETA= 135.9s
+    [134/135   99.3%] L=6 fold5 rf           fit=442.12s, trials=40, retained=61/61  | elapsed=9478.4s  ETA=  70.7s
+    [135/135  100.0%] L=6 fold5 xgboost      fit= 51.53s, trials=40, retained=61/61, best_iter=0  | elapsed=9530.5s  ETA=   0.0s
+  fold 5 done in 550.3s
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+--- lead L=6 done in 2559.1s ---
+wrote predictions → results/winter-training/predictions/pooled_allLeads.nc  (3 leads × 300 months)
+wrote metrics → results/winter-training/metrics/metrics_allLeads.csv  (1944 rows)
+wrote fold-runs log → results/winter-training/logs/fold_runs.csv  (135 rows)
+wrote feature-status log → results/winter-training/logs/feature_status.csv  (5409 rows)
+
+=== done in 9855.9s (135/135 fits completed) ===

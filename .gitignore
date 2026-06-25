@@ -42,3 +42,8 @@ htmlcov/
 
 # Optuna study DBs (large)
 *.db
+
+# Model artifacts (large)
+*.joblib
+*.pkl
+*.h5
