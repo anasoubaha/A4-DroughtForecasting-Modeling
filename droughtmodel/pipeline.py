@@ -259,6 +259,14 @@ class ExperimentRunner:
         # Test slice stays unfiltered so the all-months diagnostic can show
         # the specialisation cost on off-season targets.
         self.winter_only_training: bool = bool(self.exp.get("winter_only_training", False))
+        # Opt-in feature-set overrides applied per-fold AFTER PACF / CCF lag
+        # selection but BEFORE the feature dataset is built. Supported keys:
+        #   - `drop_seasonal_encoding: bool`  → forces `include_seasonal=False`
+        #     in build_dataset (drops sin_month / cos_month entirely).
+        #   - `force_lags: {var: [lag, ...]}` → replaces the PACF/CCF-selected
+        #     lag list for that variable verbatim (use `[]` to drop all lags).
+        # Empty / missing → no override (default behaviour, unchanged).
+        self.feature_overrides: dict[str, Any] = dict(self.exp.get("feature_overrides") or {})
         for d in (self.preds_dir, self.metrics_dir, self.logs_dir):
             d.mkdir(parents=True, exist_ok=True)
         if self.save_models:
@@ -317,6 +325,24 @@ class ExperimentRunner:
         self.setup_data()
         return self._prepare_fold(lead, fold_spec)
 
+    def _apply_lag_overrides(self, selected: dict[str, list[int]]) -> dict[str, list[int]]:
+        """Replace PACF/CCF-selected lag lists per the experiment-YAML's
+        ``feature_overrides.force_lags`` directive.
+
+        ``force_lags`` is a mapping ``{variable_name: [lag, lag, ...]}``. Variables
+        absent from the mapping keep their PACF/CCF-selected lags untouched.
+        Pass ``[]`` to drop every lag for a given variable (the contemporaneous
+        feature is unaffected — that's controlled by ``contemporary_predictors``
+        in features.yaml).
+        """
+        force = self.feature_overrides.get("force_lags") or {}
+        if not force:
+            return selected
+        merged = dict(selected)
+        for var, lags in force.items():
+            merged[var] = [int(k) for k in (lags or [])]
+        return merged
+
     def _prepare_fold(self, lead: int, fold_spec: dcv.FoldSpec) -> _PreparedFold:
         """All per-fold prep through §6.1 step 6 (standardized slices ready to fit)."""
         # 2. Lag selection on planned train (pre-quarantine).
@@ -339,6 +365,21 @@ class ExperimentRunner:
             aggregation_mode=self.feat_cfg["aggregation_mode"],
         )
 
+        # 2b. (Optional) Apply YAML-driven lag-list overrides BEFORE the
+        # boundary-gap computation and dataset build so that K_eff and the
+        # final feature set both reflect the user-specified lag pruning.
+        if self.feature_overrides.get("force_lags"):
+            selected_before = {k: list(v) for k, v in selected.items() if v}
+            selected = self._apply_lag_overrides(selected)
+            selected_after = {k: list(v) for k, v in selected.items() if v}
+            # Only log variables whose lag set actually changed
+            changed = {k: (selected_before.get(k, []), selected_after.get(k, []))
+                       for k in (set(selected_before) | set(selected_after))
+                       if selected_before.get(k, []) != selected_after.get(k, [])}
+            if changed:
+                self._log(f"    feature-override force_lags applied: "
+                          + ", ".join(f"{k}: {b}→{a}" for k, (b, a) in changed.items()))
+
         # 3. Strict quarantine: K_eff over precip-touching variables only.
         K_eff = compute_quarantine_max_lag(selected)
 
@@ -347,11 +388,14 @@ class ExperimentRunner:
                                        max_lag=K_eff, lead=lead)
 
         # 5. Build the lead-shifted feature dataset for this fold.
+        include_seasonal = bool(self.feat_cfg["include_seasonal_encoding"])
+        if self.feature_overrides.get("drop_seasonal_encoding"):
+            include_seasonal = False
         ds_feat = dfeat.build_dataset(
             self._datasets, lead=lead,
             contemporary=self.feat_cfg["contemporary_predictors"],
             lags=selected,
-            include_seasonal=self.feat_cfg["include_seasonal_encoding"],
+            include_seasonal=include_seasonal,
             include_spatial=self.feat_cfg["include_spatial_encoding"],
         )
 

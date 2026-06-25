@@ -1,0 +1,97 @@
+# Pruned winter-training experiment.
+#
+# Builds on exp_winter-training.yaml with two targeted feature-set prunes
+# motivated by the observed feature-importance patterns from the v4 sweep:
+#
+#   (1) Drop sin_month / cos_month entirely. With the target tightly bound
+#       to Nov-Feb, the model gains nothing from a calendar feature and may
+#       use shallow tree splits to memorise the May→Aug feature-month
+#       transitions per lead instead of learning physical anomalies.
+#
+#   (2) Force ENSO and MO lag sets to lag-1 only. PACF on these indices
+#       picks up long-range autocorrelation that creates near-collinear
+#       lag features. Capping them lets the trees use their split budget
+#       on NAO / atmospheric / soil-moisture features instead.
+#
+# Both prunes are applied via the new `feature_overrides` block in the
+# experiment YAML — interpreted by the pipeline AFTER PACF/CCF lag
+# selection but BEFORE the feature dataset is constructed (see
+# pipeline._apply_lag_overrides and the include_seasonal switch in
+# _prepare_fold). When absent, the pipeline behaves exactly as it did
+# for exp_default.yaml and exp_winter-training.yaml.
+
+name: pruned-winter
+
+file_prefix: ""
+
+leads: [1, 3, 6]
+
+modeling_unit: global
+
+# Inherit the v4 winter-only training filter (Nov-Feb targets only for ML
+# models; baselines still see full training data per pipeline._BASELINE_MODELS).
+winter_only_training: true
+
+# Persist fitted models for the fast-path post-hoc importance script
+# (`scripts/05_compute_posthoc_importance.py`).
+save_models: true
+
+# v5 pruning directives.
+feature_overrides:
+  # Drop sin_month / cos_month entirely. Equivalent to setting
+  # `include_seasonal=False` in build_dataset, but scoped to THIS experiment
+  # so features.yaml stays untouched.
+  drop_seasonal_encoding: true
+  # Override the PACF/CCF-selected lag lists for ENSO and MO. Empty `[]`
+  # would drop all lags for the variable; here we explicitly keep lag-1.
+  # Variables not listed (NAO, RZSM, TCWV, precip, VPD, SPEI3, etc.) keep
+  # whichever lags PACF/CCF selected for the fold.
+  force_lags:
+    enso: [1]
+    mo: [1]
+
+models:
+  - climatology
+  - persistence
+  - ar
+  - ols
+  - ridge
+  - lasso
+  - elasticnet
+  - rf
+  - xgboost
+
+search_backends:
+  rf: optuna
+  xgboost: optuna
+
+optuna_n_trials:
+  rf: 40
+  xgboost: 40
+
+hp_grids:
+  ridge:
+    alpha: [1.0e-3, 3.16e-3, 1.0e-2, 3.16e-2, 1.0e-1, 3.16e-1, 1.0, 3.16, 10.0, 31.6, 100.0, 316.0, 1000.0]
+  lasso:
+    alpha: [1.0e-3, 3.16e-3, 1.0e-2, 3.16e-2, 1.0e-1, 3.16e-1, 1.0, 3.16, 10.0, 31.6, 100.0, 316.0, 1000.0]
+  elasticnet:
+    alpha: [1.0e-3, 1.0e-2, 1.0e-1, 1.0, 10.0, 100.0, 1000.0]
+    l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
+  rf:
+    n_estimators: [200, 500]
+    max_depth: [null, 5, 10, 20]
+    min_samples_leaf: [1, 5, 20]
+    max_features: ["sqrt", 0.5, 1.0]
+  xgboost:
+    max_depth: [4, 6, 8]
+    learning_rate: [0.05, 0.1]
+    subsample: [0.7, 1.0]
+    colsample_bytree: [0.7, 1.0]
+    reg_lambda: [0.1, 1.0, 10.0]
+    min_child_weight: [1, 5]
+
+output:
+  predictions_dir: results/pruned-winter/predictions
+  metrics_dir:     results/pruned-winter/metrics
+  logs_dir:        results/pruned-winter/logs
+  models_dir:      results/pruned-winter/models

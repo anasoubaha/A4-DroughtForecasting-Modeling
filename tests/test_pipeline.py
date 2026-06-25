@@ -219,6 +219,55 @@ def test_winter_only_training_flag_default_false_and_loads_from_yaml(tmp_path):
     assert r2.winter_only_training is True
 
 
+def test_feature_overrides_default_empty_is_noop(tmp_path):
+    """With no `feature_overrides` block, `_apply_lag_overrides` is identity
+    and `feature_overrides` is an empty dict."""
+    cfg = _min_exp_config(tmp_path)
+    r = ExperimentRunner(cfg, verbose=False)
+    assert r.feature_overrides == {}
+    selected = {"enso": [3, 6, 9, 12], "nao": [1, 6], "spei3": [1, 2, 3]}
+    assert r._apply_lag_overrides(selected) == selected
+
+
+def test_feature_overrides_force_lags_replaces_lag_lists(tmp_path):
+    """force_lags overrides a variable's lag list verbatim. Variables not in
+    the override stay untouched."""
+    cfg = _min_exp_config(tmp_path)
+    cfg["feature_overrides"] = {"force_lags": {"enso": [1], "mo": []}}
+    r = ExperimentRunner(cfg, verbose=False)
+    selected = {"enso": [3, 6, 9, 12], "mo": [2, 4], "nao": [1, 6]}
+    out = r._apply_lag_overrides(selected)
+    assert out["enso"] == [1]      # forced to [1] regardless of PACF/CCF
+    assert out["mo"] == []         # forced to empty (no lags for MO)
+    assert out["nao"] == [1, 6]    # not in override → unchanged
+
+
+def test_feature_overrides_drop_seasonal_encoding_flag(tmp_path):
+    """`drop_seasonal_encoding: true` is stored and consumed by `_prepare_fold`
+    to override the global `include_seasonal_encoding` from features.yaml."""
+    cfg = _min_exp_config(tmp_path)
+    cfg["feature_overrides"] = {"drop_seasonal_encoding": True}
+    r = ExperimentRunner(cfg, verbose=False)
+    assert r.feature_overrides.get("drop_seasonal_encoding") is True
+
+
+def test_pruned_winter_experiment_yaml_loads():
+    """The shipped pruned-winter experiment YAML must load cleanly with both
+    the winter-only training filter and the v5 pruning overrides on."""
+    from droughtmodel.utils import PROJECT_ROOT
+    cfg_path = PROJECT_ROOT / "configs" / "experiments" / "exp_pruned-winter.yaml"
+    assert cfg_path.exists()
+    import yaml
+    cfg = yaml.safe_load(cfg_path.read_text())
+    assert cfg["name"] == "pruned-winter"
+    assert cfg["winter_only_training"] is True
+    assert cfg["feature_overrides"]["drop_seasonal_encoding"] is True
+    assert cfg["feature_overrides"]["force_lags"] == {"enso": [1], "mo": [1]}
+    # Output paths under results/pruned-winter/
+    for key in ("predictions_dir", "metrics_dir", "logs_dir", "models_dir"):
+        assert "pruned-winter" in cfg["output"][key]
+
+
 def test_winter_training_experiment_yaml_loads():
     """The shipped winter-training experiment YAML must load cleanly."""
     from droughtmodel.utils import PROJECT_ROOT
