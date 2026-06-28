@@ -13,6 +13,11 @@
 
 name: default
 
+# Persist fitted models so post-hoc scripts (post-hoc importance, refit-train
+# RMSE for Fig 8b) can load them via the fast path instead of refitting.
+# Adds ~1-3 GB of joblib files under `output.models_dir`.
+save_models: true
+
 # Leads to forecast (months).
 leads: [1, 3, 6]
 
@@ -79,3 +84,4 @@ output:
   predictions_dir: results/predictions
   metrics_dir: results/metrics
   logs_dir: results/logs
+  models_dir: results/models
