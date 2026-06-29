@@ -20,7 +20,7 @@
 # Training sample size drops by ~66 % (12 months/year → 4 months/year).
 # Still tens of thousands of pooled rows per fold across 164 Morocco cells.
 
-name: winter-training
+name: winter-HPenhanced
 
 file_prefix: ""
 
@@ -59,27 +59,39 @@ hp_grids:
   ridge:
     alpha: [1.0e-3, 3.16e-3, 1.0e-2, 3.16e-2, 1.0e-1, 3.16e-1, 1.0, 3.16, 10.0, 31.6, 100.0, 316.0, 1000.0]
   lasso:
-    alpha: [1.0e-3, 3.16e-3, 1.0e-2, 3.16e-2, 1.0e-1, 3.16e-1, 1.0, 3.16, 10.0, 31.6, 100.0, 316.0, 1000.0]
+    # Focus heavily on the lower/gentler end of the penalty spectrum
+    alpha: [1.0e-5, 1.0e-4, 1.0e-3, 3.16e-3, 1.0e-2, 3.16e-2, 1.0e-1, 1.0, 10.0]
   elasticnet:
-    alpha: [1.0e-3, 1.0e-2, 1.0e-1, 1.0, 10.0, 100.0, 1000.0]
-    l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
+    alpha: [1.0e-4, 1.0e-3, 1.0e-2, 1.0e-1, 1.0, 10.0]
+    # Shift the ratio to heavily favor Ridge (L2) over Lasso (L1)
+    l1_ratio: [0.01, 0.05, 0.1, 0.25, 0.5]
   rf:
     n_estimators: [200, 500]
-    max_depth: [null, 5, 10, 20]
-    min_samples_leaf: [1, 5, 20]
-    max_features: ["sqrt", 0.5, 1.0]
+    max_depth: [3, 5, 8]             # Dropped 'null' and 20. Force shallower trees.
+    min_samples_leaf: [10, 20, 50]   # Dropped 1 and 5. Require more evidence per leaf.
+    max_features: ["sqrt", "log2", 0.3] # Dropped 1.0 and 0.5. Force feature diversity.
+  #lasso:
+  #  alpha: [1.0e-3, 3.16e-3, 1.0e-2, 3.16e-2, 1.0e-1, 3.16e-1, 1.0, 3.16, 10.0, 31.6, 100.0, 316.0, 1000.0]
+  #elasticnet:
+  #  alpha: [1.0e-3, 1.0e-2, 1.0e-1, 1.0, 10.0, 100.0, 1000.0]
+  #  l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
+  #rf:
+  #  n_estimators: [200, 500]
+  #  max_depth: [null, 5, 10, 20]
+  #  min_samples_leaf: [1, 5, 20]
+  #  max_features: ["sqrt", 0.5, 1.0]
   xgboost:
-    max_depth: [4, 6, 8]
+    max_depth: [2, 3, 4] #[4, 6, 8]
     learning_rate: [0.05, 0.1]
-    subsample: [0.7, 1.0]
-    colsample_bytree: [0.7, 1.0]
-    reg_lambda: [0.1, 1.0, 10.0]
-    min_child_weight: [1, 5]
+    subsample: [0.4, 0.6, 0.8] #[0.7, 1.0]
+    colsample_bytree: [0.4, 0.6, 0.8] #[0.7, 1.0]
+    reg_lambda: [1.0, 10.0, 100.0] #[0.1, 1.0, 10.0]
+    min_child_weight: [10, 20, 50] #[1, 5]
 
 # Output paths under a dedicated subfolder so the winter-training results
 # never overwrite the default sweep's artefacts.
 output:
-  predictions_dir: results/winter-training/predictions
-  metrics_dir:     results/winter-training/metrics
-  logs_dir:        results/winter-training/logs
-  models_dir:      results/winter-training/models
+  predictions_dir: results/winter-HPenhanced/predictions
+  metrics_dir:     results/winter-HPenhanced/metrics
+  logs_dir:        results/winter-HPenhanced/logs
+  models_dir:      results/winter-HPenhanced/models
