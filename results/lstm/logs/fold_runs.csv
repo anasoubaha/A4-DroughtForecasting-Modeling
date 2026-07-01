@@ -1,0 +1,16 @@
+fold,lead,model,best_params,best_val_score,best_iteration,n_features_total,n_features_retained,K_eff,boundary_gap,search_duration_s,fit_duration_s,n_trials,train_rmse
+1,1,lstm,"{""hidden_units"": 128, ""dropout"": 0.4, ""sequence_length"": 24, ""learning_rate"": 0.0001}",,80,17,17,23,26,0.0,699.4091331958771,0,0.5479735732078552
+2,1,lstm,"{""hidden_units"": 128, ""dropout"": 0.4, ""sequence_length"": 24, ""learning_rate"": 0.0001}",,80,17,17,23,26,0.0,828.2190101146698,0,0.5489314198493958
+3,1,lstm,"{""hidden_units"": 128, ""dropout"": 0.4, ""sequence_length"": 24, ""learning_rate"": 0.0001}",,80,17,17,23,26,0.0,969.159245967865,0,0.5431048274040222
+4,1,lstm,"{""hidden_units"": 128, ""dropout"": 0.4, ""sequence_length"": 24, ""learning_rate"": 0.0001}",,80,17,17,23,26,0.0,1096.948755979538,0,0.5454553961753845
+5,1,lstm,"{""hidden_units"": 128, ""dropout"": 0.4, ""sequence_length"": 24, ""learning_rate"": 0.0001}",,80,17,17,23,26,0.0,1199.8115899562836,0,0.5360978245735168
+1,3,lstm,"{""hidden_units"": 128, ""dropout"": 0.2, ""sequence_length"": 24, ""learning_rate"": 0.0001}",,80,17,17,23,28,0.0,754.5987360477448,0,0.4608507752418518
+2,3,lstm,"{""hidden_units"": 128, ""dropout"": 0.2, ""sequence_length"": 24, ""learning_rate"": 0.0001}",,80,17,17,23,28,0.0,935.2567028999327,0,0.46636027097702026
+3,3,lstm,"{""hidden_units"": 128, ""dropout"": 0.2, ""sequence_length"": 24, ""learning_rate"": 0.0001}",,80,17,17,23,28,0.0,984.6380660533904,0,0.4534076452255249
+4,3,lstm,"{""hidden_units"": 128, ""dropout"": 0.2, ""sequence_length"": 24, ""learning_rate"": 0.0001}",,80,17,17,23,28,0.0,1104.953903913498,0,0.4672119617462158
+5,3,lstm,"{""hidden_units"": 128, ""dropout"": 0.2, ""sequence_length"": 24, ""learning_rate"": 0.0001}",,80,17,17,23,28,0.0,1113.1470458507538,0,0.477681428194046
+1,6,lstm,"{""hidden_units"": 64, ""dropout"": 0.2, ""sequence_length"": 12, ""learning_rate"": 0.0001}",,80,17,17,11,19,0.0,171.20739006996155,0,0.543241024017334
+2,6,lstm,"{""hidden_units"": 64, ""dropout"": 0.2, ""sequence_length"": 12, ""learning_rate"": 0.0001}",,80,17,17,11,19,0.0,206.53531289100647,0,0.5508797764778137
+3,6,lstm,"{""hidden_units"": 64, ""dropout"": 0.2, ""sequence_length"": 12, ""learning_rate"": 0.0001}",,80,17,17,11,19,0.0,206.7871460914612,0,0.5394353270530701
+4,6,lstm,"{""hidden_units"": 64, ""dropout"": 0.2, ""sequence_length"": 12, ""learning_rate"": 0.0001}",,80,17,17,11,19,0.0,217.37452173233032,0,0.537125825881958
+5,6,lstm,"{""hidden_units"": 64, ""dropout"": 0.2, ""sequence_length"": 12, ""learning_rate"": 0.0001}",,80,17,17,11,19,0.0,235.0386018753052,0,0.5391708016395569

@@ -1,0 +1,196 @@
+=== LSTMExperimentRunner: 'lstm' ===
+loaded data ({'time': 900, 'lat': 64, 'lon': 64}) + Morocco mask (164 cells)
+
+--- lead L = 1 ---
+  Fold-1 LSTM grid: 24 combos at L=1
+    [1/24] h=64 d=0.2 T=6  lr=0.001   val_mse= 0.4930  ( 13.2s)
+    [2/24] h=64 d=0.2 T=6  lr=0.0001  val_mse= 0.4964  ( 29.6s)
+    [3/24] h=64 d=0.2 T=12 lr=0.001   val_mse= 0.5115  ( 21.1s)
+    [4/24] h=64 d=0.2 T=12 lr=0.0001  val_mse= 0.4952  ( 47.9s)
+    [5/24] h=64 d=0.2 T=24 lr=0.001   val_mse= 0.4957  ( 46.2s)
+    [6/24] h=64 d=0.2 T=24 lr=0.0001  val_mse= 0.4926  (116.5s)
+    [7/24] h=64 d=0.4 T=6  lr=0.001   val_mse= 0.5262  ( 17.3s)
+    [8/24] h=64 d=0.4 T=6  lr=0.0001  val_mse= 0.5313  ( 47.9s)
+    [9/24] h=64 d=0.4 T=12 lr=0.001   val_mse= 0.5110  ( 31.3s)
+    [10/24] h=64 d=0.4 T=12 lr=0.0001  val_mse= 0.5109  ( 79.7s)
+    [11/24] h=64 d=0.4 T=24 lr=0.001   val_mse= 0.5131  ( 48.9s)
+    [12/24] h=64 d=0.4 T=24 lr=0.0001  val_mse= 0.5050  (156.0s)
+    [13/24] h=128 d=0.2 T=6  lr=0.001   val_mse= 0.4973  ( 23.6s)
+    [14/24] h=128 d=0.2 T=6  lr=0.0001  val_mse= 0.4944  ( 58.9s)
+    [15/24] h=128 d=0.2 T=12 lr=0.001   val_mse= 0.4857  ( 43.9s)
+    [16/24] h=128 d=0.2 T=12 lr=0.0001  val_mse= 0.4853  ( 93.2s)
+    [17/24] h=128 d=0.2 T=24 lr=0.001   val_mse= 0.4833  ( 98.4s)
+    [18/24] h=128 d=0.2 T=24 lr=0.0001  val_mse= 0.4931  (177.4s)
+    [19/24] h=128 d=0.4 T=6  lr=0.001   val_mse= 0.5183  ( 32.4s)
+    [20/24] h=128 d=0.4 T=6  lr=0.0001  val_mse= 0.5045  ( 72.0s)
+    [21/24] h=128 d=0.4 T=12 lr=0.001   val_mse= 0.5033  ( 58.3s)
+    [22/24] h=128 d=0.4 T=12 lr=0.0001  val_mse= 0.4900  (137.3s)
+    [23/24] h=128 d=0.4 T=24 lr=0.001   val_mse= 0.4912  (111.4s)
+    [24/24] h=128 d=0.4 T=24 lr=0.0001  val_mse= 0.4826  (254.0s)
+  Fold-1 BEST L=1: h=128, d=0.4, T=24, lr=0.0001  (val_mse=0.4826)  →  log saved to results/lstm/logs/lstm_grid_search_L1.csv
+  fold 1  (locked: h=128, d=0.4, T=24, lr=0.0001)
+    LSTM fit= 699.4s  epochs=80  n_train=90364  | fold done in 700.6s
+  fold 2  (locked: h=128, d=0.4, T=24, lr=0.0001)
+    LSTM fit= 828.2s  epochs=80  n_train=100204  | fold done in 829.7s
+  fold 3  (locked: h=128, d=0.4, T=24, lr=0.0001)
+    LSTM fit= 969.2s  epochs=80  n_train=110044  | fold done in 970.7s
+  fold 4  (locked: h=128, d=0.4, T=24, lr=0.0001)
+    LSTM fit=1096.9s  epochs=80  n_train=119884  | fold done in 1098.4s
+  fold 5  (locked: h=128, d=0.4, T=24, lr=0.0001)
+    LSTM fit=1199.8s  epochs=80  n_train=129724  | fold done in 1201.3s
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+--- lead L=1 done in 6764.3s ---
+
+--- lead L = 3 ---
+  Fold-1 LSTM grid: 24 combos at L=3
+    [1/24] h=64 d=0.2 T=6  lr=0.001   val_mse= 1.1516  ( 11.5s)
+    [2/24] h=64 d=0.2 T=6  lr=0.0001  val_mse= 1.0169  ( 13.5s)
+    [3/24] h=64 d=0.2 T=12 lr=0.001   val_mse= 1.1027  ( 20.7s)
+    [4/24] h=64 d=0.2 T=12 lr=0.0001  val_mse= 1.0004  ( 23.8s)
+    [5/24] h=64 d=0.2 T=24 lr=0.001   val_mse= 1.1068  ( 37.5s)
+    [6/24] h=64 d=0.2 T=24 lr=0.0001  val_mse= 0.9954  ( 44.3s)
+    [7/24] h=64 d=0.4 T=6  lr=0.001   val_mse= 1.1313  ( 11.5s)
+    [8/24] h=64 d=0.4 T=6  lr=0.0001  val_mse= 1.0276  ( 13.3s)
+    [9/24] h=64 d=0.4 T=12 lr=0.001   val_mse= 1.0691  ( 19.9s)
+    [10/24] h=64 d=0.4 T=12 lr=0.0001  val_mse= 1.0159  ( 25.4s)
+    [11/24] h=64 d=0.4 T=24 lr=0.001   val_mse= 1.0850  ( 37.6s)
+    [12/24] h=64 d=0.4 T=24 lr=0.0001  val_mse= 1.0135  ( 48.1s)
+    [13/24] h=128 d=0.2 T=6  lr=0.001   val_mse= 1.1093  ( 22.8s)
+    [14/24] h=128 d=0.2 T=6  lr=0.0001  val_mse= 1.0009  ( 25.0s)
+    [15/24] h=128 d=0.2 T=12 lr=0.001   val_mse= 1.1709  ( 43.5s)
+    [16/24] h=128 d=0.2 T=12 lr=0.0001  val_mse= 0.9858  ( 45.8s)
+    [17/24] h=128 d=0.2 T=24 lr=0.001   val_mse= 1.1377  ( 79.3s)
+    [18/24] h=128 d=0.2 T=24 lr=0.0001  val_mse= 0.9847  ( 86.1s)
+    [19/24] h=128 d=0.4 T=6  lr=0.001   val_mse= 1.0752  ( 22.5s)
+    [20/24] h=128 d=0.4 T=6  lr=0.0001  val_mse= 1.0117  ( 26.5s)
+    [21/24] h=128 d=0.4 T=12 lr=0.001   val_mse= 1.0792  ( 39.3s)
+    [22/24] h=128 d=0.4 T=12 lr=0.0001  val_mse= 0.9962  ( 46.4s)
+    [23/24] h=128 d=0.4 T=24 lr=0.001   val_mse= 1.0691  ( 77.7s)
+    [24/24] h=128 d=0.4 T=24 lr=0.0001  val_mse= 0.9932  ( 99.8s)
+  Fold-1 BEST L=3: h=128, d=0.2, T=24, lr=0.0001  (val_mse=0.9847)  →  log saved to results/lstm/logs/lstm_grid_search_L3.csv
+  fold 1  (locked: h=128, d=0.2, T=24, lr=0.0001)
+    LSTM fit= 754.6s  epochs=80  n_train=90036  | fold done in 755.9s
+  fold 2  (locked: h=128, d=0.2, T=24, lr=0.0001)
+    LSTM fit= 935.3s  epochs=80  n_train=99876  | fold done in 936.7s
+  fold 3  (locked: h=128, d=0.2, T=24, lr=0.0001)
+    LSTM fit= 984.6s  epochs=80  n_train=109716  | fold done in 986.0s
+  fold 4  (locked: h=128, d=0.2, T=24, lr=0.0001)
+    LSTM fit=1105.0s  epochs=80  n_train=119556  | fold done in 1106.4s
+  fold 5  (locked: h=128, d=0.2, T=24, lr=0.0001)
+    LSTM fit=1113.1s  epochs=80  n_train=129396  | fold done in 1114.5s
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+--- lead L=3 done in 5936.9s ---
+
+--- lead L = 6 ---
+  Fold-1 LSTM grid: 24 combos at L=6
+    [1/24] h=64 d=0.2 T=6  lr=0.001   val_mse= 1.1235  ( 11.2s)
+    [2/24] h=64 d=0.2 T=6  lr=0.0001  val_mse= 1.0317  ( 13.3s)
+    [3/24] h=64 d=0.2 T=12 lr=0.001   val_mse= 1.0795  ( 19.2s)
+    [4/24] h=64 d=0.2 T=12 lr=0.0001  val_mse= 1.0000  ( 24.6s)
+    [5/24] h=64 d=0.2 T=24 lr=0.001   val_mse= 1.1326  ( 35.5s)
+    [6/24] h=64 d=0.2 T=24 lr=0.0001  val_mse= 1.0123  ( 42.6s)
+    [7/24] h=64 d=0.4 T=6  lr=0.001   val_mse= 1.0904  ( 11.1s)
+    [8/24] h=64 d=0.4 T=6  lr=0.0001  val_mse= 1.0482  ( 14.1s)
+    [9/24] h=64 d=0.4 T=12 lr=0.001   val_mse= 1.0427  ( 19.5s)
+    [10/24] h=64 d=0.4 T=12 lr=0.0001  val_mse= 1.0209  ( 26.5s)
+    [11/24] h=64 d=0.4 T=24 lr=0.001   val_mse= 1.0835  ( 35.8s)
+    [12/24] h=64 d=0.4 T=24 lr=0.0001  val_mse= 1.0334  ( 46.3s)
+    [13/24] h=128 d=0.2 T=6  lr=0.001   val_mse= 1.1902  ( 24.3s)
+    [14/24] h=128 d=0.2 T=6  lr=0.0001  val_mse= 1.0407  ( 23.9s)
+    [15/24] h=128 d=0.2 T=12 lr=0.001   val_mse= 1.2097  ( 45.1s)
+    [16/24] h=128 d=0.2 T=12 lr=0.0001  val_mse= 1.0083  ( 46.3s)
+    [17/24] h=128 d=0.2 T=24 lr=0.001   val_mse= 1.2773  ( 88.5s)
+    [18/24] h=128 d=0.2 T=24 lr=0.0001  val_mse= 1.0260  ( 99.1s)
+    [19/24] h=128 d=0.4 T=6  lr=0.001   val_mse= 1.1318  ( 22.5s)
+    [20/24] h=128 d=0.4 T=6  lr=0.0001  val_mse= 1.0489  ( 26.3s)
+    [21/24] h=128 d=0.4 T=12 lr=0.001   val_mse= 1.1029  ( 45.0s)
+    [22/24] h=128 d=0.4 T=12 lr=0.0001  val_mse= 1.0201  ( 54.9s)
+    [23/24] h=128 d=0.4 T=24 lr=0.001   val_mse= 1.1219  ( 82.5s)
+    [24/24] h=128 d=0.4 T=24 lr=0.0001  val_mse= 1.0334  ( 90.8s)
+  Fold-1 BEST L=6: h=64, d=0.2, T=12, lr=0.0001  (val_mse=1.0000)  →  log saved to results/lstm/logs/lstm_grid_search_L6.csv
+  fold 1  (locked: h=64, d=0.2, T=12, lr=0.0001)
+    LSTM fit= 171.2s  epochs=80  n_train=93480  | fold done in 172.0s
+  fold 2  (locked: h=64, d=0.2, T=12, lr=0.0001)
+    LSTM fit= 206.5s  epochs=80  n_train=103320  | fold done in 207.4s
+  fold 3  (locked: h=64, d=0.2, T=12, lr=0.0001)
+    LSTM fit= 206.8s  epochs=80  n_train=113160  | fold done in 207.7s
+  fold 4  (locked: h=64, d=0.2, T=12, lr=0.0001)
+    LSTM fit= 217.4s  epochs=80  n_train=123000  | fold done in 218.3s
+  fold 5  (locked: h=64, d=0.2, T=12, lr=0.0001)
+    LSTM fit= 235.0s  epochs=80  n_train=132840  | fold done in 236.1s
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+--- lead L=6 done in 2105.1s ---
+wrote predictions → results/lstm/predictions/pooled_allLeads.nc
+wrote metrics → results/lstm/metrics/metrics_allLeads.csv  (648 rows)
+wrote fold-runs log → results/lstm/logs/fold_runs.csv  (15 rows)
+
+=== done in 14809.5s ===

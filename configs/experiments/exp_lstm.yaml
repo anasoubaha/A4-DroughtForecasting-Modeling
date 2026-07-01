@@ -1,0 +1,70 @@
+# Phase 12 — LSTM experiment (Keras-style sliding-window in PyTorch).
+#
+# Diverges from the tabular pipeline in three places:
+#   1. NO PACF/CCF lag selection. The LSTM ingests raw historical sequences and
+#      learns the lag structure end-to-end. `feature_overrides.lstm_no_lags: true`
+#      tells the LSTM pipeline to build the feature dataset with `lags={}`.
+#   2. Boundary-gap formula switches from `L + K_eff + 2` to `L + T + 1`, where
+#      T is the LSTM sequence length. See droughtmodel.sequence.lstm_boundary_gap.
+#   3. Hyperparameter tuning is a *manual* 8-combination grid run on Fold 1 only;
+#      the best (hidden, dropout, T, lr) is locked and deployed to Folds 2–5.
+#
+# All other infrastructure (CV splits, FoldStandardizer, metrics, prediction
+# stitching, save_models, file_prefix) is reused unchanged.
+
+name: lstm
+
+# Subdirectory for outputs so this experiment does not collide with the
+# tabular sweeps under results/{predictions,metrics,logs,models}/.
+output:
+  predictions_dir: results/lstm/predictions
+  metrics_dir:     results/lstm/metrics
+  logs_dir:        results/lstm/logs
+  models_dir:      results/lstm/models
+
+file_prefix: ""
+
+leads: [1, 3, 6]
+
+modeling_unit: global
+
+# Persist the locked-best LSTM per (fold, lead) so post-hoc diagnostics can
+# load it without retraining (~10 MB per file).
+save_models: true
+
+# Keep the v4 winter-only-training filter — drops feature-time rows whose
+# lead-shifted target month is outside Nov-Feb. Test slice is never filtered.
+winter_only_training: false
+
+# LSTM-specific pipeline directives.
+lstm:
+  # Run the 8-combo grid on Fold 1, then lock the best combo for Folds 2-5.
+  # If false, every fold runs the full grid (more expensive but no locking).
+  representative_tuning_fold: 1
+
+  # Manual grid — 16 combos (was 8 in the v12 spec; learning_rate axis was
+  # widened after the 2026-06-30 diagnostic showed lr=1e-3 overfits at epoch 1
+  # while lr=1e-4 lets val loss actually descend for 6-10 epochs).
+  # hidden_units × dropout × sequence_length × learning_rate = 2 × 2 × 2 × 2 = 16.
+  grid:
+    hidden_units:    [64, 128] #[16, 32] #
+    dropout:         [0.2, 0.4]
+    sequence_length: [6, 12, 24]
+    learning_rate:   [0.001, 0.0001]
+
+  # Maximum T across the grid — used to size the boundary gap so the same
+  # (train, val, test) split is reused for every combo within Fold 1's search.
+  max_sequence_length: 24
+
+# Feature-set overrides — same YAML hook the tabular pipeline uses, but with
+# an LSTM-specific switch that tells the LSTM pipeline to skip PACF/CCF.
+feature_overrides:
+  lstm_no_lags: true
+  # Keep sin/cos and lat/lon by default. Flip to true to drop the seasonal
+  # encoding if you want a pruned-LSTM variant.
+  drop_seasonal_encoding: false
+
+# Only the LSTM is run by this experiment. Climatology + persistence are added
+# automatically by the pipeline as MSSS references.
+models:
+  - lstm

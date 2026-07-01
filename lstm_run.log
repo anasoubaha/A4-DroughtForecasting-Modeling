@@ -1,0 +1,163 @@
+=== LSTMExperimentRunner: 'lstm' ===
+loaded data ({'time': 900, 'lat': 64, 'lon': 64}) + Morocco mask (164 cells)
+
+--- lead L = 1 ---
+  Fold-1 LSTM grid: 8 combos at L=1
+    [1/8] h=16 d=0.2 T=6  lr=0.001   val_mse= 1.0431  ( 24.3s)
+    [2/8] h=16 d=0.2 T=12 lr=0.001   val_mse= 1.0413  (279.2s)
+    [3/8] h=16 d=0.4 T=6  lr=0.001   val_mse= 1.0068  ( 32.7s)
+    [4/8] h=16 d=0.4 T=12 lr=0.001   val_mse= 0.9933  (289.6s)
+    [5/8] h=32 d=0.2 T=6  lr=0.001   val_mse=    inf  ( 21.7s)
+    [6/8] h=32 d=0.2 T=12 lr=0.001   val_mse= 0.9770  (134.7s)
+    [7/8] h=32 d=0.4 T=6  lr=0.001   val_mse= 1.1042  ( 19.0s)
+    [8/8] h=32 d=0.4 T=12 lr=0.001   val_mse= 1.1261  ( 28.7s)
+  Fold-1 BEST L=1: h=32, d=0.2, T=12, lr=0.001  (val_mse=0.9770)  →  log saved to results/lstm/logs/lstm_grid_search_L1.csv
+  fold 1  (locked: h=32, d=0.2, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 257.9s  epochs=80  n_train=94300  | fold done in 258.8s
+  fold 2  (locked: h=32, d=0.2, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 285.4s  epochs=80  n_train=104140  | fold done in 286.5s
+  fold 3  (locked: h=32, d=0.2, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 311.6s  epochs=80  n_train=113980  | fold done in 312.6s
+  fold 4  (locked: h=32, d=0.2, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 339.0s  epochs=80  n_train=123820  | fold done in 340.0s
+  fold 5  (locked: h=32, d=0.2, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 366.9s  epochs=80  n_train=133660  | fold done in 368.0s
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+--- lead L=1 done in 2509.3s ---
+
+--- lead L = 3 ---
+  Fold-1 LSTM grid: 8 combos at L=3
+    [1/8] h=16 d=0.2 T=6  lr=0.001   val_mse=    inf  ( 18.6s)
+    [2/8] h=16 d=0.2 T=12 lr=0.001   val_mse= 1.0560  ( 29.9s)
+    [3/8] h=16 d=0.4 T=6  lr=0.001   val_mse=    inf  ( 18.3s)
+    [4/8] h=16 d=0.4 T=12 lr=0.001   val_mse= 1.0580  ( 29.3s)
+    [5/8] h=32 d=0.2 T=6  lr=0.001   val_mse=    inf  ( 16.9s)
+    [6/8] h=32 d=0.2 T=12 lr=0.001   val_mse= 1.0715  ( 29.0s)
+    [7/8] h=32 d=0.4 T=6  lr=0.001   val_mse=    inf  ( 17.0s)
+    [8/8] h=32 d=0.4 T=12 lr=0.001   val_mse= 1.1101  ( 32.0s)
+  Fold-1 BEST L=3: h=16, d=0.2, T=12, lr=0.001  (val_mse=1.0560)  →  log saved to results/lstm/logs/lstm_grid_search_L3.csv
+  fold 1  (locked: h=16, d=0.2, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 258.4s  epochs=80  n_train=93972  | fold done in 259.3s
+  fold 2  (locked: h=16, d=0.2, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 286.9s  epochs=80  n_train=103812  | fold done in 287.9s
+  fold 3  (locked: h=16, d=0.2, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 313.8s  epochs=80  n_train=113652  | fold done in 314.8s
+  fold 4  (locked: h=16, d=0.2, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 343.8s  epochs=80  n_train=123492  | fold done in 344.9s
+  fold 5  (locked: h=16, d=0.2, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 368.4s  epochs=80  n_train=133332  | fold done in 369.5s
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+--- lead L=3 done in 1874.3s ---
+
+--- lead L = 6 ---
+  Fold-1 LSTM grid: 8 combos at L=6
+    [1/8] h=16 d=0.2 T=6  lr=0.001   val_mse=    inf  ( 18.8s)
+    [2/8] h=16 d=0.2 T=12 lr=0.001   val_mse= 1.0913  ( 29.8s)
+    [3/8] h=16 d=0.4 T=6  lr=0.001   val_mse=    inf  ( 18.2s)
+    [4/8] h=16 d=0.4 T=12 lr=0.001   val_mse= 1.1121  ( 37.4s)
+    [5/8] h=32 d=0.2 T=6  lr=0.001   val_mse=    inf  ( 17.0s)
+    [6/8] h=32 d=0.2 T=12 lr=0.001   val_mse= 1.0908  ( 29.3s)
+    [7/8] h=32 d=0.4 T=6  lr=0.001   val_mse=    inf  ( 17.0s)
+    [8/8] h=32 d=0.4 T=12 lr=0.001   val_mse= 1.0025  ( 66.3s)
+  Fold-1 BEST L=6: h=32, d=0.4, T=12, lr=0.001  (val_mse=1.0025)  →  log saved to results/lstm/logs/lstm_grid_search_L6.csv
+  fold 1  (locked: h=32, d=0.4, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 255.3s  epochs=80  n_train=93480  | fold done in 256.2s
+  fold 2  (locked: h=32, d=0.4, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 284.1s  epochs=80  n_train=103320  | fold done in 285.1s
+  fold 3  (locked: h=32, d=0.4, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 311.4s  epochs=80  n_train=113160  | fold done in 312.4s
+  fold 4  (locked: h=32, d=0.4, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 336.9s  epochs=80  n_train=123000  | fold done in 338.0s
+  fold 5  (locked: h=32, d=0.4, T=12, lr=0.001)
+    [warn] could not save LSTM model: Can't pickle <class 'droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM'>: it's not found as droughtmodel.models.lstm._make_variational_lstm.<locals>.VariationalLSTM
+    LSTM fit= 362.1s  epochs=80  n_train=132840  | fold done in 363.2s
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1396: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+/opt/anaconda3/envs/droughtforecast/lib/python3.11/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+--- lead L=6 done in 1892.0s ---
+wrote predictions → results/lstm/predictions/pooled_allLeads.nc
+wrote metrics → results/lstm/metrics/metrics_allLeads.csv  (648 rows)
+wrote fold-runs log → results/lstm/logs/fold_runs.csv  (15 rows)
+
+=== done in 6278.8s ===

@@ -1,0 +1,37 @@
+# Default hyperparameters for the LSTM (Phase 12).
+# These are the LOCKED-AT-FIT-TIME values; the grid in exp_lstm.yaml overrides
+# the four tuned axes (hidden_units, dropout, sequence_length, learning_rate).
+
+name: lstm-run2
+
+# Architecture
+params:
+  # --- tuned by the Fold-1 grid (placeholders below; overridden per-trial) ---
+  hidden_units: 16
+  dropout: 0.2              # same value used for input AND recurrent dropout
+  sequence_length: 6        # T — months of history per sample
+  learning_rate: 0.0001
+
+  # --- fixed across the grid (intentionally constrained) ---
+  # Bumped from 256 to 512 after 2026-06-30 diagnostic: larger batches gave
+  # lower-variance gradients and pushed best_val from 0.99 to 0.978 on the
+  # L=3 fold-1 sanity check.
+  batch_size: 512
+  max_epochs: 50
+  patience: 10              # early stopping on val loss
+  loss: weighted_mse        # "weighted_mse" or "mse"
+  weighted_mse_threshold: 1.0   # |y_true| > this is the "extreme" bin
+  weighted_mse_alpha: 3.0       # weight = 1 + alpha * 1{|y|>threshold}; alpha=3 → 4x weight on extremes
+  weight_decay: 0.0   #If you notice the LSTM still overfitting, bumping this to 1e-4 is a standard fix
+  # Global L2 gradient-norm clip applied before each optimizer step. Set to 0
+  # to disable. Default 1.0 prevents the exploding-gradient divergence that
+  # poisoned L=3 / L=6 under weighted_mse on the 2026-06-30 run.
+  grad_clip_norm: 1.0
+  num_workers: 0
+  # Pinned to CPU. `auto` resolves to MPS on macOS, and MPS produces NaN on
+  # the very first batch of our variational-dropout LSTMCell loop — a known
+  # numeric-stability gap in PyTorch's Metal backend as of 2026. Every LSTM
+  # run before 2026-06-30 that "worked" was silently running on MPS and
+  # producing near-random outputs. CPU is 2-3× slower but correct.
+  device: cpu            # "cpu" | "cuda" | "mps" | "auto"
+  seed: 42
